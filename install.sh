@@ -36,6 +36,11 @@
  ssh slave-1
 
 
-hduser@laptop:~$ vi /usr/local/hadoop/etc/hadoop/hadoop-env.sh
+ vi /usr/local/hadoop/etc/hadoop/hadoop-env.sh
 
 export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
+
+
+ sudo mkdir -p /usr/local/hadoop_store/hdfs/namenode
+ sudo mkdir -p /usr/local/hadoop_store/hdfs/datanode
+ sudo chown -R hduser:hadoop /usr/local/hadoop_store
