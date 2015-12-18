@@ -1,0 +1,18 @@
+//initialize current working directory
+git init
+
+//add to staging area
+git add <filename>
+
+//commit from staging area to git repository
+git commit -m "Message"
+
+//switch to different branch
+git checkout branch_name
+
+//check status of files in staging area
+git status
+
+//check difference from staging area and working directory
+git diff <file_name>
+
