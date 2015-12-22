@@ -10,3 +10,7 @@ mean(lda_class == Direction.2005)
 
 #using a different probability threshold for the posterior
 sum(lda_predict$posterior[,1] >=.9)
+da_class = lda_predict$class
+predictors = predict%x_variables)
+table(lda_class, Direction.2005)
+mean(lda_class != Direction.2005)
