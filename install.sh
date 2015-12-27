@@ -20,6 +20,14 @@
  ssh-keygen -t dsa -P ' ' -f ~/.ssh/id_dsa
 
  cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys
+ 
+ 
+ 
+ sudo apt-get install rsync
+
+ ssh-keygen -t dsa -P ' ' -f ~/.ssh/id_dsa
+
+ cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys
 
  wget -c http://mirror.olnevhost.net/pub/apache/hadoop/common/current/hadoop-2.6.0.tar.gz
 
