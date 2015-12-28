@@ -82,3 +82,13 @@ export PATH=$PATH:$HADOOP_HOME/sbin:$HADOOP_HOME/bin
  sudo mkdir -p /usr/local/hadoop_store/hdfs/namenode
  sudo mkdir -p /usr/local/hadoop_store/hdfs/datanode
  sudo chown -R hduser:hadoop /usr/local/hadoop_store
+ 
+ 
+  sudo mkdir -p /usr/local/hadoop_store/hdfs/namenode
+ sudo mkdir -p /usr/local/hadoop_store/hdfs/datanode
+ sudo chown -R hduser:hadoop /usr/local/hadoop_store
+
+
+ sudo mkdir -p /usr/local/hadoop_store/hdfs/namenode
+ sudo mkdir -p /usr/local/hadoop_store/hdfs/datanode
+ sudo chown -R hduser:hadoop /usr/local/hadoop_store
