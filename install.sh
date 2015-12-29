@@ -52,7 +52,15 @@
  ssh-copy-id -i ~/.ssh/id_rsa.pub slave-1
 #Make sure you can do a password less ssh using following command.
  ssh slave-1
-
+#Generate a ssh key for the user
+ ssh-keygen -t rsa -P ""
+#Authorize the key to enable password less ssh 
+ cat /home/hadoopuser/.ssh/id_rsa.pub >> /home/hadoopuser/.ssh/authorized_keys
+ chmod 600 authorized_keys
+#Copy this key to slave-1 to enable password less ssh 
+ ssh-copy-id -i ~/.ssh/id_rsa.pub slave-1
+#Make sure you can do a password less ssh using following command.
+ ssh slave-1
 
  vi /usr/local/hadoop/etc/hadoop/hadoop-env.sh
 
