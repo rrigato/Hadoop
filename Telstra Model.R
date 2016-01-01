@@ -12,8 +12,11 @@
 #
 #########################################################################################
 
-#install.packages('vcd')
+#install.packages("vcd")
+install.packages("stats")
 library(vcd)
+library(plyr)
+library(stats)
 
 
 
@@ -91,7 +94,7 @@ level_5 = which(train2[,4] == 'severity_type 5' )
 length(level_5)
 
 
-
+sum(train2[level_4,3] >1)
 sum(train2[level_4,3])
 sum(train2[level_3,3])
 head(train2)
@@ -100,23 +103,74 @@ head(train2)
 
 #initializing a data frame to have the predicted probabilities and id 
 predict_obs = nrow(test2)
-prediction = data.frame(matrix(ncol=4,nrow=predict_obs))
+prediction = data.frame(matrix(ncol=8,nrow=predict_obs))
 nrow(prediction)
 colnames(prediction) = c("id", "predict_0", "predict_1", "predict_2") 
 prediction
 
 
+
+###################################################
+#
+#	First algorithm with log_loss of ~.86
+#
+#
+#
+####################################################
+
 data_frame = prediction
 data_frame[1:nrow(data_frame),1] = test2$id
-data_frame[1:nrow(data_frame),2] = .64
-data_frame[1:nrow(data_frame),3] = .26
-data_frame[1:nrow(data_frame),4] = .094
+data_frame[1:nrow(data_frame),2] = .64146
+data_frame[1:nrow(data_frame),3] = .26449
+data_frame[1:nrow(data_frame),4] = .094037
 
-sum(data_frame$id == test2$id)
+
+
+
+#######################################################
+#
+#	second algorithm accounts for severity_type 4
+#
+#	if severity_type = severity_type 4
+#	then predict_0 = .86, predict_1 = .14, predict_2 = 0
+#	.8558934 again
+#
+########################################################
+data_frame2 = test2
+data_frame2[1:nrow(test2),ncol(data_frame2) +1] = .64146
+data_frame2[1:nrow(test2),ncol(data_frame2) +1] = .26449
+data_frame2[1:nrow(test2),ncol(data_frame2) +1] = .094037
+data_frame2 = rename(data_frame2, c("V5" = "predict_0", "V6" = "predict_1","V7" = "predict_2"))
+
+
+
+#	if severity_type = severity_type 4
+#	then predict_0 = .86, predict_1 = .14, predict_2 = 0
+data_frame2[which(data_frame2$severity_type =="severity_type 4"),5] =.86
+data_frame2[which(data_frame2$severity_type =="severity_type 4"),6] =.14
+data_frame2[which(data_frame2$severity_type =="severity_type 4"),7] = 0
+
+#check to make sure proabilities are adjusted
+nrow(data_frame2[which(data_frame2$severity_type =="severity_type 4"),])
+
+
+
+#	if severity_type = severity_type 4
+#	then predict_0 = .86, predict_1 = .14, predict_2 = 0
+data_frame2[which(data_frame2$severity_type =="severity_type 3"),5] =.86
+data_frame2[which(data_frame2$severity_type =="severity_type 3"),6] =.14
+data_frame2[which(data_frame2$severity_type =="severity_type 3"),7] = 0
+
+
+
+#have to drop the columns that are not used in the log_loss testing function
+keep<-c("id", "predict_0", "predict_1", "predict_2") 
+data_frame2 = data_frame2[,keep]
+
+which(rowsum(data_frame2[,2:4],1:nrow(data_frame2)) >1)
+#number of outcome variables
 num_predict = 3
-data_frame$id[2] = 12660
-
-log_loss(data_frame,3)
+log_loss(data_frame2,3)
 
 
 
