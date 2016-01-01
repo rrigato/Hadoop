@@ -94,8 +94,115 @@ length(level_5)
 
 sum(train2[level_4,3])
 sum(train2[level_3,3])
-
 head(train2)
+
+
+
+#initializing a data frame to have the predicted probabilities and id 
+predict_obs = nrow(test2)
+prediction = data.frame(matrix(ncol=4,nrow=predict_obs))
+nrow(prediction)
+colnames(prediction) = c("id", "predict_0", "predict_1", "predict_2") 
+prediction
+
+
+data_frame = prediction
+data_frame[1:nrow(data_frame),1] = test2$id
+data_frame[1:nrow(data_frame),2] = .64
+data_frame[1:nrow(data_frame),3] = .26
+data_frame[1:nrow(data_frame),4] = .094
+
+sum(data_frame$id == test2$id)
+num_predict = 3
+data_frame$id[2] = 12660
+
+log_loss(data_frame,3)
+
+
+
+
+
+
+
+#########################################################
+#
+#		tests that the log-loss function works
+#	Only works if the first 10 obs from test2 have a y variable
+#		of 0. 
+#
+#
+##########################################################
+prediction2 = data.frame(matrix(ncol=4,nrow=3))
+colnames(prediction2) = c("id", "predict_0", "predict_1", "predict_2") 
+data_frame = prediction2
+data_frame[1:10,1] = test2$id[1:10]
+data_frame[1:10,2] = 1
+data_frame[1:10,3] = 0
+data_frame[1:10,4] = 0
+data_frame
+test2[1:10,3]
+
+#this answer should be equilvalent to log(1 - 10^(-15)) * 10
+#if the first 10 observations of test2 have fault_severity =0
+log_loss(data_frame,3)
+which(test2$id == data_frame$id[5])
+#############################################################
+#end of log_loss test
+
+
+
+###############################################################
+#
+#The log_loss function takes two arguements, a data.frame and
+#a vector of length 1 num_predict
+#The data.frame has ncol = num_predict +1  with column 1 = id, column 2 = predict_0, 
+#column 3 = predict_1 ... etc
+#
+#It will multiply the log of the predicted probability times 1 if the observation
+#turned out to be that category, 0 otherwise
+#It sums all of those up and divides by -N, where N is the number of 
+#observations in data_frame
+#
+#################################################################
+log_loss <- function(data_frame, num_predict)
+{
+	total = 0
+	for( i in 1:nrow(data_frame))
+	{
+		
+		for(j in 1: num_predict)
+		{
+			y=0
+			#gets the id from the ith row of the data_fame
+			#if the actual fault_severity == j-1 then that is when y is 1
+			#This is the classification of the point
+			if (test2[which(test2$id==data_frame$id[i]),3] == (j-1))
+			{
+				y=1;
+				
+			}
+
+			#total is equal to total plus y times
+			# the log of the ith row and the j+1 column
+			#it is j+1 because predict_0 is in column 2
+			total = total + y*log( max( min( data_frame[i,(j+1)], 1-10^(-15) ),  10^(-15) ) )
+			
+
+		}
+		
+	}
+	print("Your logloss score is:")
+	print(-total/nrow(data_frame))
+
+
+}
+
+
+
+
+
+
+
 
 
 
