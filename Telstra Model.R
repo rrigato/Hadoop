@@ -80,18 +80,18 @@ boxplot(train2$fault_severity~ train2$severity_type)
 
 
 #sorts based on severity level type
-level_1 = which(train2[,4] == 'severity_type 1' )
-length(level_1)
-level_2 = which(train2[,4] == 'severity_type 2')
-length(level_2)
+level_1 = train2[which(train2[,4] == 'severity_type 1' ),]
+nrow(level_1)
+level_2 = train2[which(train2[,4] == 'severity_type 2'),]
+nrow(level_2)
 
-level_3 = which(train2[,4] == 'severity_type 3' )
-length(level_3)
-level_4 = which(train2[,4] == 'severity_type 4')
-length(level_4)
+level_3 = train2[which(train2[,4] == 'severity_type 3' ),]
+nrow(level_3)
+level_4 = train2[which(train2[,4] == 'severity_type 4'),]
+nrow(level_4)
 
-level_5 = which(train2[,4] == 'severity_type 5' )
-length(level_5)
+level_5 = train2[which(train2[,4] == 'severity_type 5' ),]
+nrow(level_5)
 
 
 sum(train2[level_4,3] >1)
@@ -100,23 +100,30 @@ sum(train2[level_3,3])
 head(train2)
 
 
+count(level_1, 'fault_severity')/nrow(level_1)
+count(level_2, 'fault_severity')/nrow(level_2)
 
-#initializing a data frame to have the predicted probabilities and id 
-predict_obs = nrow(test2)
-prediction = data.frame(matrix(ncol=8,nrow=predict_obs))
-nrow(prediction)
-colnames(prediction) = c("id", "predict_0", "predict_1", "predict_2") 
-prediction
+sum(level_2 ==2)
+
 
 
 
 ###################################################
 #
 #	First algorithm with log_loss of ~.86
-#
+#	log_loss of .8638
 #
 #
 ####################################################
+
+
+#initializing a data frame to have the predicted probabilities and id 
+predict_obs = nrow(test2)
+prediction = data.frame(matrix(ncol=4,nrow=predict_obs))
+nrow(prediction)
+colnames(prediction) = c("id", "predict_0", "predict_1", "predict_2") 
+prediction
+
 
 data_frame = prediction
 data_frame[1:nrow(data_frame),1] = test2$id
@@ -124,6 +131,8 @@ data_frame[1:nrow(data_frame),2] = .64146
 data_frame[1:nrow(data_frame),3] = .26449
 data_frame[1:nrow(data_frame),4] = .094037
 
+num_predict = 3
+log_loss(data_frame,3)
 
 
 
@@ -133,13 +142,15 @@ data_frame[1:nrow(data_frame),4] = .094037
 #
 #	if severity_type = severity_type 4
 #	then predict_0 = .86, predict_1 = .14, predict_2 = 0
-#	.8558934 again
+#	.8558934 
 #
 ########################################################
 data_frame2 = test2
 data_frame2[1:nrow(test2),ncol(data_frame2) +1] = .64146
 data_frame2[1:nrow(test2),ncol(data_frame2) +1] = .26449
 data_frame2[1:nrow(test2),ncol(data_frame2) +1] = .094037
+
+#rename the columns predict_0, predict_1 etc.
 data_frame2 = rename(data_frame2, c("V5" = "predict_0", "V6" = "predict_1","V7" = "predict_2"))
 
 
@@ -167,12 +178,15 @@ data_frame2[which(data_frame2$severity_type =="severity_type 3"),7] = 0
 keep<-c("id", "predict_0", "predict_1", "predict_2") 
 data_frame2 = data_frame2[,keep]
 
-which(rowsum(data_frame2[,2:4],1:nrow(data_frame2)) >1)
 #number of outcome variables
 num_predict = 3
 log_loss(data_frame2,3)
 
 
+#adds a column 5 which is the sum of predict_0, predict_1, predict_2
+#for my implementation of the solution, this needs to be less than or equal to one
+#This will show how many rows have predictions greater than 1 
+sum(transform(data_frame2,sum=rowSums(data_frame2[,2:4]))[,5] >1)
 
 
 
