@@ -13,7 +13,7 @@
 #########################################################################################
 
 #install.packages("vcd")
-install.packages("stats")
+#install.packages("stats")
 library(vcd)
 library(plyr)
 library(stats)
@@ -100,6 +100,7 @@ sum(train2[level_3,3])
 head(train2)
 
 
+#relative frequencies to use for level1 and 2
 count(level_1, 'fault_severity')/nrow(level_1)
 count(level_2, 'fault_severity')/nrow(level_2)
 
@@ -187,6 +188,111 @@ log_loss(data_frame2,3)
 #for my implementation of the solution, this needs to be less than or equal to one
 #This will show how many rows have predictions greater than 1 
 sum(transform(data_frame2,sum=rowSums(data_frame2[,2:4]))[,5] >1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#######################################################
+#
+#	third algorithm accounts for all severity
+#
+#	if severity_type = severity_type 4
+#	then predict_0 = .86, predict_1 = .14, predict_2 = 0
+#	.8558934 
+#	if "severity_type 1", then .5282 for 0
+#	.3308 for 1 and .1409 for 2
+#	if "severity_type 2" that .74716 for 0,
+#	.18877 for 1 and .06405 for 2
+#	
+########################################################
+data_frame3 = test2
+data_frame3[1:nrow(test2),ncol(data_frame3) +1] = .64146
+data_frame3[1:nrow(test2),ncol(data_frame3) +1] = .26449
+data_frame3[1:nrow(test2),ncol(data_frame3) +1] = .094037
+
+#rename the columns predict_0, predict_1 etc.
+data_frame3 = rename(data_frame3, c("V5" = "predict_0", "V6" = "predict_1","V7" = "predict_2"))
+
+
+
+#	if severity_type = severity_type 4
+#	then predict_0 = .86, predict_1 = .14, predict_2 = 0
+data_frame3[which(data_frame3$severity_type =="severity_type 4"),5] =.86
+data_frame3[which(data_frame3$severity_type =="severity_type 4"),6] =.14
+data_frame3[which(data_frame3$severity_type =="severity_type 4"),7] = 0
+
+#check to make sure proabilities are adjusted
+nrow(data_frame3[which(data_frame3$severity_type =="severity_type 4"),])
+
+
+
+#	if severity_type = severity_type 3
+#	then predict_0 = .86, predict_1 = .14, predict_2 = 0
+data_frame3[which(data_frame3$severity_type =="severity_type 3"),5] =.86
+data_frame3[which(data_frame3$severity_type =="severity_type 3"),6] =.14
+data_frame3[which(data_frame3$severity_type =="severity_type 3"),7] = 0
+
+
+
+#	if severity_type = severity_type 2
+#	then predict_0 = .74716, predict_1 = .18877, predict_2 = .06405
+data_frame3[which(data_frame3$severity_type =="severity_type 2"),5] = .74716
+data_frame3[which(data_frame3$severity_type =="severity_type 2"),6] = .18877
+data_frame3[which(data_frame3$severity_type =="severity_type 2"),7] = .06405
+
+
+
+#	if severity_type = severity_type 1
+#	then predict_0 = .5282, predict_1 = .3308, predict_2 = .1409
+data_frame3[which(data_frame3$severity_type =="severity_type 1"),5] = .5282
+data_frame3[which(data_frame3$severity_type =="severity_type 1"),6] = .3308
+data_frame3[which(data_frame3$severity_type =="severity_type 1"),7] = .1409
+
+
+
+#have to drop the columns that are not used in the log_loss testing function
+keep<-c("id", "predict_0", "predict_1", "predict_2") 
+data_frame3 = data_frame3[,keep]
+
+#number of outcome variables
+num_predict = 3
+log_loss(data_frame3,3)
+
+
+#adds a column 5 which is the sum of predict_0, predict_1, predict_2
+#for my implementation of the solution, this needs to be less than or equal to one
+#This will show how many rows have predictions greater than 1 
+sum(transform(data_frame3,sum=rowSums(data_frame3[,2:4]))[,5] >1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
