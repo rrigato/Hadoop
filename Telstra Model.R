@@ -16,6 +16,7 @@
 #install.packages("stats")
 #install.packages("tree")
 #install.packages("randomForest")
+#install.packages("foreign")
 library(vcd)
 library(plyr)
 library(stats)
@@ -24,6 +25,8 @@ library(MASS)
 library(tree)
 library(ISLR)
 library(randomForest)
+library(foreign)
+library(nnet)
 
 #importing the datasets that were provided by Telstra
 train <- read.csv("C:\\Users\\Randy\\Downloads\\Telstra Kaggle Competion\\train.csv")
@@ -153,13 +156,13 @@ head(train2)
 
 
 
-
+which(train[,4] == 'severity_type 3' )
 
 #relative frequencies to use for level1 and 2
 count(level_1, 'fault_severity')/nrow(level_1)
 count(level_2, 'fault_severity')/nrow(level_2)
 
-
+count(train, 'severity_type')/nrow(train)
 
 one_table = table(level_1$fault_severity, level_1$event_type)
 prop.table(one_table,1)
@@ -454,7 +457,7 @@ sum(transform(data_frame5,sum=rowSums(data_frame5[,2:4]))[,5] >1.00001)
 ################################################################
 #	algorithm 6: lda for each category of severity_type
 #
-#
+#	log_loss: .8053
 #
 #
 #
@@ -489,25 +492,25 @@ lda.pred2 = lda.pred2[c(6,2,3,4)]
 
 
 
-
+#####uncomment if enough obs for lda
 
 #linear discriminant analysis for severity_type 3 bin
-lda.fit3 = lda(fault_severity~total_volume , data= level_3)
-lda.pred3 = predict(lda.fit3, test2[which(test2[,4] == 'severity_type 3'),])
-lda.pred3 = as.data.frame(lda.pred3)
-head(lda.pred3)
-lda.pred3[,6]= test2[which(test2[,4] == 'severity_type 3'),1]
-lda.pred3 = rename(lda.pred3, c("posterior.0" = "predict_0", "posterior.1" = "predict_1","posterior.2" = "predict_2", "V6" = "id"))
+#lda.fit3 = lda(fault_severity~total_volume , data= level_3)
+#lda.pred3 = predict(lda.fit3, test2[which(test2[,4] == 'severity_type 3'),])
+#lda.pred3 = as.data.frame(lda.pred3)
+#head(lda.pred3)
+#lda.pred3[,6]= test2[which(test2[,4] == 'severity_type 3'),1]
+#lda.pred3 = rename(lda.pred3, c("posterior.0" = "predict_0", "posterior.1" = "predict_1","posterior.2" = "predict_2", "V6" = "id"))
 
 #reorders the variables and drops not needed variables.
-lda.pred3 = lda.pred3[c(6,2,3,4)]
+#lda.pred3 = lda.pred3[c(6,2,3,4)]
 
-
+#####uncomment if enough obs for lda
 
 
 
 #fix severity_type 3
-lda.pred3 = level_3
+lda.pred3 = test2[which(test2[,4] == 'severity_type 3'),]
 lda.pred3 = lda.pred3[c(1,2,3,4)]
 lda.pred3[,2]= .86
 lda.pred3[,3] = .14
@@ -565,7 +568,7 @@ data_frame6 = rbind(lda.pred1, lda.pred2)
 data_frame6 = rbind(data_frame6, lda.pred3)
 data_frame6 = rbind(data_frame6, lda.pred4)
 data_frame6 = rbind(data_frame6, lda.pred5)
-data_frame6= rename(data_frame6,c('id'='id'))
+
 
 
 
@@ -580,6 +583,163 @@ log_loss(data_frame6,num_predict)
 
 #This will show how many rows have predictions greater than 1 
 sum(transform(data_frame6,sum=rowSums(data_frame6[,2:4]))[,5] >1.00001)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################
+#	algorithm 7: multinomial for each category of severity_type
+#
+#	log_loss: .8053
+#
+#
+#
+################################################################
+
+
+
+#multinomial regression
+multi.fit1 = multinom(fault_severity~total_volume , data= level_1)
+multi.pred1 = predict(multi.fit1, newdata=test2[which(test2[,4] == 'severity_type 1'),], "probs")
+multi.pred1 = as.data.frame(multi.pred1)
+head(multi.pred1)
+multi.pred1[,4]= test2[which(test2[,4] == 'severity_type 1'),1]
+multi.pred1 = rename(multi.pred1, c("0" = "predict_0", "1" = "predict_1","2" = "predict_2", "V4" = "id"))
+
+#reorders the variables and drops not needed variables.
+multi.pred1 = multi.pred1[c(4,1,2,3)]
+
+
+
+
+#multinomial regression
+multi.fit2 = multinom(fault_severity~total_volume , data= level_2)
+multi.pred2 = predict(multi.fit2, newdata=test2[which(test2[,4] == 'severity_type 2'),], "probs")
+multi.pred2 = as.data.frame(multi.pred2)
+head(multi.pred2)
+multi.pred2[,4]= test2[which(test2[,4] == 'severity_type 2'),1]
+multi.pred2 = rename(multi.pred2, c("0" = "predict_0", "1" = "predict_1","2" = "predict_2", "V4" = "id"))
+
+#reorders the variables and drops not needed variables.
+multi.pred2 = multi.pred2[c(4,1,2,3)]
+
+
+
+#####uncomment if enough obs for lda
+
+#multinomial regression
+#multi.fit3 = multinom(fault_severity~total_volume , data= level_3)
+#multi.pred3 = predict(multi.fit3, newdata=test2[which(test2[,4] == 'severity_type 3'),], "probs")
+#multi.pred3 = as.data.frame(multi.pred3)
+#head(multi.pred3)
+#multi.pred3[,4]= test2[which(test2[,4] == 'severity_type 3'),1]
+#multi.pred3 = rename(multi.pred3, c("0" = "predict_0", "1" = "predict_1","2" = "predict_2", "V4" = "id"))
+
+#reorders the variables and drops not needed variables.
+#multi.pred3 = multi.pred3[c(4,1,2,3)]
+
+#####uncomment if enough obs for lda
+
+
+
+#fix severity_type 3
+lda.pred3 = test2[which(test2[,4] == 'severity_type 3'),]
+lda.pred3 = lda.pred3[c(1,2,3,4)]
+lda.pred3[,2]= .86
+lda.pred3[,3] = .14
+lda.pred3[,4] = 0
+lda.pred3 = rename(lda.pred3, c("location" = "predict_0", "fault_severity" = "predict_1","severity_type" = "predict_2"))
+
+
+
+
+
+
+#linear discriminant analysis for severity_type 4 bin
+lda.fit4 = lda(fault_severity~total_volume , data= level_4)
+lda.pred4 = predict(lda.fit4, test2[which(test2[,4] == 'severity_type 4'),])
+lda.pred4 = as.data.frame(lda.pred4)
+head(lda.pred4)
+lda.pred4[,5] = 0
+lda.pred4[,6]= test2[which(test2[,4] == 'severity_type 4'),1]
+lda.pred4 = rename(lda.pred4, c("posterior.0" = "predict_0", "posterior.1" = "predict_1","V5" = "predict_2", "V6" = "id"))
+
+#reorders the variables and drops not needed variables.
+lda.pred4 = lda.pred4[c(6,2,3,5)]
+
+
+
+
+
+
+#linear discriminant analysis for severity_type 5 bin
+lda.fit5 = lda(fault_severity~total_volume , data= level_5)
+lda.pred5 = predict(lda.fit5, test2[which(test2[,4] == 'severity_type 5'),])
+lda.pred5 = as.data.frame(lda.pred5)
+head(lda.pred5)
+lda.pred5[,5] = 0
+lda.pred5[,6]= test2[which(test2[,4] == 'severity_type 5'),1]
+lda.pred5 = rename(lda.pred5, c("posterior.0" = "predict_0", "posterior.1" = "predict_1","V5" = "predict_2", "V6" = "id"))
+
+#reorders the variables and drops not needed variables.
+lda.pred5 = lda.pred5[c(6,2,3,5)]
+
+
+
+
+
+
+
+
+
+
+
+#bind severity type 1 and 2
+data_frame7 = rbind(multi.pred1, multi.pred2)
+
+
+data_frame7 = rbind(data_frame7, lda.pred3)
+data_frame7 = rbind(data_frame7, lda.pred4)
+data_frame7 = rbind(data_frame7, lda.pred5)
+
+
+
+
+head(data_frame7)
+nrow(data_frame7)
+
+
+names(data_frame7)
+
+num_predict = 3
+log_loss(data_frame7,num_predict)
+
+#This will show how many rows have predictions greater than 1 
+sum(transform(data_frame7,sum=rowSums(data_frame7[,2:4]))[,5] >1.00001)
+
+
+
+
+
+
+
 
 
 
