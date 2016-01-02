@@ -60,7 +60,7 @@ test = merge(test , log_feature, by='id')
 
 ##############################################################
 #	Sums together the volume variable from log_feature
-#
+#	does not distinguish between log_feature
 #
 #
 #
@@ -127,7 +127,8 @@ goodfit(train2$fault_severity)
 
 boxplot(train2$fault_severity~ train2$severity_type)
 boxplot(train2$fault_severity~ train2$event_type)
-
+plot(train2$fault_severity~train2$volume)
+table(train2$fault_severity.volume)
 
 
 #sorts based on severity level type
@@ -151,6 +152,9 @@ sum(train2[level_3,3])
 head(train2)
 
 
+
+
+
 #relative frequencies to use for level1 and 2
 count(level_1, 'fault_severity')/nrow(level_1)
 count(level_2, 'fault_severity')/nrow(level_2)
@@ -161,6 +165,7 @@ one_table = table(level_1$fault_severity, level_1$event_type)
 prop.table(one_table,1)
 
 
+#doesn't work
 level_1s = sqldf("	select * from level_1 where event_type in zz.large_sample
 					(select z.event_type as large_sample from
 						(select event_type,count(*) as obs from level_1 group by event_type)z
@@ -356,6 +361,232 @@ sum(transform(data_frame3,sum=rowSums(data_frame3[,2:4]))[,5] >1)
 
 
 
+#######################################################
+#
+#	Fourth algorithm clusters based on total_volume
+#	log_loss of 22.44389
+########################################################
+data_frame4 = test2
+data_frame4[1:nrow(test2),ncol(data_frame4) +1] = .64146
+data_frame4[1:nrow(test2),ncol(data_frame4) +1] = .26449
+data_frame4[1:nrow(test2),ncol(data_frame4) +1] = .094037
+
+#rename the columns predict_0, predict_1 etc.
+data_frame4 = rename(data_frame4, c("V7" = "predict_0", "V8" = "predict_1","V9" = "predict_2"))
+
+
+data_frame4[which(data_frame4[,6] <= 20),9] = 0
+data_frame4[which(data_frame4[,6] <= 20),8] = 1
+data_frame4[which(data_frame4[,6] <= 20),7] = 0
+
+data_frame4[which(data_frame4[,6] %in% 20:44),9] = 0
+data_frame4[which(data_frame4[,6] %in% 20:44),8] = 0
+data_frame4[which(data_frame4[,6] %in% 20:44),7] = 1
+
+data_frame4[which(data_frame4[,6] >45),9] = 1
+data_frame4[which(data_frame4[,6] > 45),8] = 0
+data_frame4[which(data_frame4[,6] > 45),7] = 0
+
+#have to drop the columns that are not used in the log_loss testing function
+keep<-c("id", "predict_0", "predict_1", "predict_2") 
+data_frame4 = data_frame4[,keep]
+
+
+
+
+
+#number of outcome variables
+num_predict = 3
+log_loss(data_frame4,3)
+
+
+
+#adds a column 5 which is the sum of predict_0, predict_1, predict_2
+#for my implementation of the solution, this needs to be less than or equal to one
+#This will show how many rows have predictions greater than 1 
+sum(transform(data_frame4,sum=rowSums(data_frame4[,2:4]))[,5] >1)
+
+
+
+
+
+
+
+
+
+#######################################################
+#
+#	Fifth algorithm qda of fault_severity ~ log_loss
+#	log_loss of .9454182 for qda
+#	log_los of .8423054 for lda
+########################################################
+data_frame5 = test2
+#qda.fit = qda(fault_severity~total_volume, data= train2)
+qda.fit = lda(fault_severity~total_volume, data= train2)
+qda.pred = predict(qda.fit, test2)
+qda.pred = as.data.frame(qda.pred)
+
+head(data_frame5)
+data_frame5[,7:11] = qda.pred 
+head(data_frame5)
+
+
+#rename the columns predict_0, predict_1 etc.
+data_frame5 = rename(data_frame5, c("posterior.0" = "predict_0", "posterior.1" = "predict_1","posterior.2" = "predict_2"))
+
+
+#have to drop the columns that are not used in the log_loss testing function
+keep<-c("id", "predict_0", "predict_1", "predict_2") 
+data_frame5 = data_frame5[,keep]
+
+
+
+num_predict = 3
+log_loss(data_frame5,num_predict)
+
+#This will show how many rows have predictions greater than 1 
+sum(transform(data_frame5,sum=rowSums(data_frame5[,2:4]))[,5] >1.00001)
+
+
+
+
+
+################################################################
+#	algorithm 6: lda for each category of severity_type
+#
+#
+#
+#
+#
+################################################################
+
+
+
+#linear discriminant analysis
+lda.fit1 = lda(fault_severity~total_volume , data= level_1)
+lda.pred1 = predict(lda.fit1, test2[which(test2[,4] == 'severity_type 1'),])
+lda.pred1 = as.data.frame(lda.pred1)
+head(lda.pred1)
+lda.pred1[,6]= test2[which(test2[,4] == 'severity_type 1'),1]
+lda.pred1 = rename(lda.pred1, c("posterior.0" = "predict_0", "posterior.1" = "predict_1","posterior.2" = "predict_2", "V6" = "id"))
+
+#reorders the variables and drops not needed variables.
+lda.pred1 = lda.pred1[c(6,2,3,4)]
+
+
+
+
+#linear discriminant analysis for severity_type 2 bin
+lda.fit2 = lda(fault_severity~total_volume , data= level_2)
+lda.pred2 = predict(lda.fit2, test2[which(test2[,4] == 'severity_type 2'),])
+lda.pred2 = as.data.frame(lda.pred2)
+head(lda.pred2)
+lda.pred2[,6]= test2[which(test2[,4] == 'severity_type 2'),1]
+lda.pred2 = rename(lda.pred2, c("posterior.0" = "predict_0", "posterior.1" = "predict_1","posterior.2" = "predict_2", "V6" = "id"))
+
+#reorders the variables and drops not needed variables.
+lda.pred2 = lda.pred2[c(6,2,3,4)]
+
+
+
+
+
+#linear discriminant analysis for severity_type 3 bin
+lda.fit3 = lda(fault_severity~total_volume , data= level_3)
+lda.pred3 = predict(lda.fit3, test2[which(test2[,4] == 'severity_type 3'),])
+lda.pred3 = as.data.frame(lda.pred3)
+head(lda.pred3)
+lda.pred3[,6]= test2[which(test2[,4] == 'severity_type 3'),1]
+lda.pred3 = rename(lda.pred3, c("posterior.0" = "predict_0", "posterior.1" = "predict_1","posterior.2" = "predict_2", "V6" = "id"))
+
+#reorders the variables and drops not needed variables.
+lda.pred3 = lda.pred3[c(6,2,3,4)]
+
+
+
+
+
+#fix severity_type 3
+lda.pred3 = level_3
+lda.pred3 = lda.pred3[c(1,2,3,4)]
+lda.pred3[,2]= .86
+lda.pred3[,3] = .14
+lda.pred3[,4] = 0
+lda.pred3 = rename(lda.pred3, c("location" = "predict_0", "fault_severity" = "predict_1","severity_type" = "predict_2"))
+
+
+
+
+
+
+#linear discriminant analysis for severity_type 4 bin
+lda.fit4 = lda(fault_severity~total_volume , data= level_4)
+lda.pred4 = predict(lda.fit4, test2[which(test2[,4] == 'severity_type 4'),])
+lda.pred4 = as.data.frame(lda.pred4)
+head(lda.pred4)
+lda.pred4[,5] = 0
+lda.pred4[,6]= test2[which(test2[,4] == 'severity_type 4'),1]
+lda.pred4 = rename(lda.pred4, c("posterior.0" = "predict_0", "posterior.1" = "predict_1","V5" = "predict_2", "V6" = "id"))
+
+#reorders the variables and drops not needed variables.
+lda.pred4 = lda.pred4[c(6,2,3,5)]
+
+
+
+
+
+
+#linear discriminant analysis for severity_type 5 bin
+lda.fit5 = lda(fault_severity~total_volume , data= level_5)
+lda.pred5 = predict(lda.fit5, test2[which(test2[,4] == 'severity_type 5'),])
+lda.pred5 = as.data.frame(lda.pred5)
+head(lda.pred5)
+lda.pred5[,5] = 0
+lda.pred5[,6]= test2[which(test2[,4] == 'severity_type 5'),1]
+lda.pred5 = rename(lda.pred5, c("posterior.0" = "predict_0", "posterior.1" = "predict_1","V5" = "predict_2", "V6" = "id"))
+
+#reorders the variables and drops not needed variables.
+lda.pred5 = lda.pred5[c(6,2,3,5)]
+
+
+
+
+
+
+
+
+
+
+
+#bind severity type 1 and 2
+data_frame6 = rbind(lda.pred1, lda.pred2)
+
+
+data_frame6 = rbind(data_frame6, lda.pred3)
+data_frame6 = rbind(data_frame6, lda.pred4)
+data_frame6 = rbind(data_frame6, lda.pred5)
+data_frame6= rename(data_frame6,c('id'='id'))
+
+
+
+head(data_frame6)
+nrow(data_frame6)
+
+
+names(data_frame6)
+
+num_predict = 3
+log_loss(data_frame6,num_predict)
+
+#This will show how many rows have predictions greater than 1 
+sum(transform(data_frame6,sum=rowSums(data_frame6[,2:4]))[,5] >1.00001)
+
+
+
+
+
+
+
 
 
 
@@ -413,7 +644,7 @@ log_loss <- function(data_frame, num_predict)
 		for(j in 1: num_predict)
 		{
 			y=0
-			#gets the id from the ith row of the data_fame
+			#gets the id from the ith row of the data_frame
 			#if the actual fault_severity == j-1 then that is when y is 1
 			#This is the classification of the point
 			if (test2[which(test2$id==data_frame$id[i]),3] == (j-1))
