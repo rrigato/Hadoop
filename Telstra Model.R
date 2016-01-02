@@ -14,11 +14,16 @@
 
 #install.packages("vcd")
 #install.packages("stats")
+#install.packages("tree")
+#install.packages("randomForest")
 library(vcd)
 library(plyr)
 library(stats)
-
-
+library(sqldf)
+library(MASS)
+library(tree)
+library(ISLR)
+library(randomForest)
 
 #importing the datasets that were provided by Telstra
 train <- read.csv("C:\\Users\\Randy\\Downloads\\Telstra Kaggle Competion\\train.csv")
@@ -46,8 +51,53 @@ head(event_type)
 
 #merging the datasets
 train = merge(train, severity_type, by='id')
-#train = merge(train , resource_type, by='id')
 test = merge(test, severity_type, by='id')
+
+train = merge(train , log_feature, by='id')
+test = merge(test , log_feature, by='id')
+
+
+
+##############################################################
+#	Sums together the volume variable from log_feature
+#
+#
+#
+#
+#############################################################
+train = sqldf("select id, location, fault_severity, severity_type,
+		 log_feature, sum(volume) as total_volume from train group by 1")
+
+test = sqldf("select id, location, severity_type,
+		 log_feature, sum(volume) as total_volume from test group by 1")
+
+
+
+
+
+train = merge(train , event_type, by='id')
+test = merge(test , event_type, by='id')
+
+
+
+
+train = merge(train , resource_type, by='id')
+test = merge(test , resource_type, by='id')
+
+
+
+#tests to make sure I have some number of observations
+all_vals <- sqldf("select count(distinct(id)) from train ")
+
+
+
+################################################################
+#	Splitting the train dataset into train2 and test2
+#
+#
+#
+#################################################################
+
 
 
 
@@ -76,6 +126,7 @@ distplot(cbind(train2$severity_type,train2$fault_severity))
 goodfit(train2$fault_severity)
 
 boxplot(train2$fault_severity~ train2$severity_type)
+boxplot(train2$fault_severity~ train2$event_type)
 
 
 
@@ -104,7 +155,20 @@ head(train2)
 count(level_1, 'fault_severity')/nrow(level_1)
 count(level_2, 'fault_severity')/nrow(level_2)
 
-sum(level_2 ==2)
+
+
+one_table = table(level_1$fault_severity, level_1$event_type)
+prop.table(one_table,1)
+
+
+level_1s = sqldf("	select * from level_1 where event_type in zz.large_sample
+					(select z.event_type as large_sample from
+						(select event_type,count(*) as obs from level_1 group by event_type)z
+					 where obs >10
+					)zz 
+		      ")
+
+
 
 
 
@@ -215,6 +279,8 @@ sum(transform(data_frame2,sum=rowSums(data_frame2[,2:4]))[,5] >1)
 #	if "severity_type 2" that .74716 for 0,
 #	.18877 for 1 and .06405 for 2
 #	
+# 	log_loss of .8084057
+#
 ########################################################
 data_frame3 = test2
 data_frame3[1:nrow(test2),ncol(data_frame3) +1] = .64146
