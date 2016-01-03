@@ -4,7 +4,7 @@
 #The goal of this script is to predict Telstra fault severity at any location.
 #The response variable is 0(no fault) 1 (a few faults)  or 2 (many faults)
 #
-#Part two
+#Part three
 #
 #
 #
@@ -13,6 +13,7 @@
 #########################################################################################
 
 install.packages("e1071")
+install.packages("gbm")
 library(vcd)
 library(plyr)
 library(stats)
@@ -24,6 +25,7 @@ library(randomForest)
 library(foreign)
 library(nnet)
 library(e1071)
+library(gbm)
 
 #importing the datasets that were provided by Telstra
 train <- read.csv("C:\\Users\\Randy\\Downloads\\Telstra Kaggle Competion\\train.csv")
@@ -109,50 +111,17 @@ temp = c(train2[1:nrow(train2),1],test2[1:nrow(test2),1])
 sum(temp %in% train[1:nrow(train),1])
 
 
-distplot(cbind(train2$severity_type,train2$fault_severity))
-
-#gives the distribution
-goodfit(train2$fault_severity)
-
-boxplot(train2$fault_severity~ train2$severity_type)
-boxplot(train2$fault_severity~ train2$event_type)
-plot(train2$fault_severity~train2$volume)
 
 
 
-#sorts based on severity level type
-level_1 = train2[which(train2[,4] == 'severity_type 1' ),]
-nrow(level_1)
-level_2 = train2[which(train2[,4] == 'severity_type 2'),]
-nrow(level_2)
-
-level_3 = train2[which(train2[,4] == 'severity_type 3' ),]
-nrow(level_3)
-level_4 = train2[which(train2[,4] == 'severity_type 4'),]
-nrow(level_4)
-
-level_5 = train2[which(train2[,4] == 'severity_type 5' ),]
-nrow(level_5)
-
-
-sum(train2[level_4,3] >1)
-sum(train2[level_4,3])
-sum(train2[level_3,3])
-head(train2)
 
 
 
-which(train[,4] == 'severity_type 3' )
 
-#relative frequencies to use for level1 and 2
-count(level_1, 'fault_severity')/nrow(level_1)
-count(level_2, 'fault_severity')/nrow(level_2)
 
-count(level_4, 'fault_severity')/nrow(level_4)
 
-#good for two categoricals
-one_table = table( level_1$total_volume,level_1$fault_severity)
-prop.table(one_table,1)
+
+
 
 
 
@@ -160,7 +129,7 @@ prop.table(one_table,1)
 
 
 ################################################################
-#	Naive Bayes implementation
+#	Naive Bayes implementation part 2
 #	Using the log_feature, where I average observations with multiple id's
 #
 #	log_loss for just fault_severity~log_feature: .7087696 
@@ -169,32 +138,110 @@ prop.table(one_table,1)
 #	log_loss for fault_severity~volume: .8910279
 #	log_loss for fault_severity~ log_feature + volume: .745426
 #	log_loss for fault_severity~ volume + severity_type: .8654359
+#	log_loss for fault_severity~ event_type: .766821
+#	log_loss for fault_severity~ location: .8121829
+#	log_loss for fault_severity~ resource_type: .8068138
+
+#	log_loss for fault_severity~ resource_type + event_type: .8164183
+#	log_loss for fault_severity~ resource_type + location : .8298111
+#	log_loss for fault_severity~ resource_type + log_feature : .7733385
+
 ##################################################################
 
 
-nb = naiveBayes(fault_severity ~ log_feature, data = train2)
-
-nb.pred = predict(nb, newdata=test2, type="raw")
-nb.pred = as.data.frame(nb.pred)
-head(nb.pred)
-nb.pred[,4] =test2[,1]
-nb.pred = rename(nb.pred, c("0" = "predict_0", "1" = "predict_1","2" = "predict_2", "V4" = "id"))
-nb.pred = nb.pred[c(4,1,2,3)]
+nb2 = naiveBayes(fault_severity ~log_feature + event_type, data = train2)
+nb.pred2 = predict(nb2, newdata=test2, type="raw")
+nb.pred2 = as.data.frame(nb.pred2)
+head(nb.pred2)
+nb.pred2[,4] =test2[,1]
+nb.pred2 = rename(nb.pred2, c("0" = "predict_0", "1" = "predict_1","2" = "predict_2", "V4" = "id"))
+nb.pred2 = nb.pred2[c(4,1,2,3)]
 
 
 #average the observations with the same ids
-nb.pred[,5] = ave(nb.pred$predict_0, nb.pred$id, FUN=mean)
-nb.pred[,6] = ave(nb.pred$predict_1, nb.pred$id, FUN=mean)
-nb.pred[,7] = ave(nb.pred$predict_2,nb.pred$id, FUN=mean)
+nb.pred2[,5] = ave(nb.pred2$predict_0, nb.pred2$id, FUN=mean)
+nb.pred2[,6] = ave(nb.pred2$predict_1, nb.pred2$id, FUN=mean)
+nb.pred2[,7] = ave(nb.pred2$predict_2,nb.pred2$id, FUN=mean)
 
 
 
-test = nb.pred
-nb.pred = sqldf("select distinct id, V5 as predict_0, V6 as predict_1, V7 as predict_2 from test")
+test = nb.pred2
+nb.pred2 = sqldf("select distinct id, V5 as predict_0, V6 as predict_1, V7 as predict_2 from test")
 
 
 num_predict = 3
-log_loss(nb.pred,num_predict)
+log_loss(nb.pred2,num_predict)
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################
+#	Implementation of a classification tree
+#	fault_severity~ severity_type log_loss: .8473691
+#	fault_severity~ severity_type + log_loss: .8473691
+
+
+	randomForest() for severity_type + resource_type + volume log_loss: 4.055598
+
+	boosting log_loss = .9930778
+	boosting log_loss = .7082097 # with shrinkage = .65, n.trees = 500, interaction.depth=4
+	boosting log_loss = .6008061 # with shrinkage = .35, n.trees = 500, interaction.depth=4
+	boosting log_loss = .6186485 # with shrinkage = .35, n.trees = 500, interaction.depth=4
+	boosting log_loss = .7001604 # with shrinkage = .25, n.trees = 1000, interaction.depth=4
+	boosting log_loss = .7001604 # with shrinkage = .25, n.trees = 250, interaction.depth=3
+##################################################################
+
+
+#bTree = tree(factor(fault_severity) ~severity_type + resource_type,data = train2)
+#bTree = randomForest(factor(fault_severity) ~severity_type + resource_type,data = train2)
+
+
+#have to tell R that fault_severity is a factor
+bTree = gbm(fault_severity ~. -id, distribution = "multinomial", n.trees = 250, shrinkage = .25,
+		interaction.depth =3,  data = train2)
+bTreeP = predict(bTree, newdata=test2, n.trees = 5000, type="response")
+bTreeP = as.data.frame(bTreeP)
+head(bTreeP)
+bTreeP[,4] =test2[,1]
+bTreeP = rename(bTreeP, c("0.250" = "predict_0", "1.250" = "predict_1","2.250" = "predict_2", "V4" = "id"))
+bTreeP = bTreeP[c(4,1,2,3)]
+
+
+#average the observations with the same ids
+bTreeP[,5] = ave(bTreeP$predict_0, bTreeP$id, FUN=mean)
+bTreeP[,6] = ave(bTreeP$predict_1, bTreeP$id, FUN=mean)
+bTreeP[,7] = ave(bTreeP$predict_2,bTreeP$id, FUN=mean)
+
+
+
+test = bTreeP
+bTreeP = sqldf("select distinct id, V5 as predict_0, V6 as predict_1, V7 as predict_2 from test")
+
+
+num_predict = 3
+log_loss(bTreeP,num_predict)
+
+
+sum(transform(bTreeP,sum=rowSums(bTreeP[,2:4]))[,5] >1.000001)
+
+
+
+
+goodfit(train2$fault_severity)
+
+
+
+
+
+
 
 
 
@@ -245,6 +292,3 @@ log_loss <- function(data_frame, num_predict)
 
 
 }
-
-
-
