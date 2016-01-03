@@ -196,7 +196,9 @@ log_loss(nb.pred2,num_predict)
 	boosting log_loss = .6008061 # with shrinkage = .35, n.trees = 500, interaction.depth=4
 	boosting log_loss = .6186485 # with shrinkage = .35, n.trees = 500, interaction.depth=4
 	boosting log_loss = .7001604 # with shrinkage = .25, n.trees = 1000, interaction.depth=4
-	boosting log_loss = .7001604 # with shrinkage = .25, n.trees = 250, interaction.depth=3
+	boosting log_loss = .5851071 # with shrinkage = .25, n.trees = 250, interaction.depth=3
+
+	boosting log_loss = .5804122 # with shrinkage = .1, n.trees = 300, interaction.depth = 2
 ##################################################################
 
 
@@ -205,13 +207,13 @@ log_loss(nb.pred2,num_predict)
 
 
 #have to tell R that fault_severity is a factor
-bTree = gbm(fault_severity ~. -id, distribution = "multinomial", n.trees = 250, shrinkage = .25,
-		interaction.depth =3,  data = train2)
+bTree = gbm(fault_severity ~. -id, distribution = "multinomial", n.trees = 300, shrinkage = .1,
+		interaction.depth =2,  data = train2)
 bTreeP = predict(bTree, newdata=test2, n.trees = 5000, type="response")
 bTreeP = as.data.frame(bTreeP)
 head(bTreeP)
 bTreeP[,4] =test2[,1]
-bTreeP = rename(bTreeP, c("0.250" = "predict_0", "1.250" = "predict_1","2.250" = "predict_2", "V4" = "id"))
+bTreeP = rename(bTreeP, c("0.300" = "predict_0", "1.300" = "predict_1","2.300" = "predict_2", "V4" = "id"))
 bTreeP = bTreeP[c(4,1,2,3)]
 
 
@@ -236,6 +238,55 @@ sum(transform(bTreeP,sum=rowSums(bTreeP[,2:4]))[,5] >1.000001)
 
 
 goodfit(train2$fault_severity)
+
+
+
+################################################################
+#
+#	automate testing of gbm
+#
+#	interaction.depth is lowest at 2 or 3
+#	.05 to .15 for shrinkage
+#
+#
+################################################################
+
+shrink_fact= seq(.01,.4, by=.01); shrink_fact
+for (i in 1:40)
+{
+
+bTree = gbm(fault_severity ~. -id, distribution = "multinomial", n.trees = 250, shrinkage = .05,
+		interaction.depth = 2,  data = train2)
+bTreeP = predict(bTree, newdata=test2, n.trees = 5000, type="response")
+bTreeP = as.data.frame(bTreeP)
+
+bTreeP[,4] =test2[,1]
+bTreeP = rename(bTreeP, c("0.250" = "predict_0", "1.250" = "predict_1","2.250" = "predict_2", "V4" = "id"))
+bTreeP = bTreeP[c(4,1,2,3)]
+
+
+#average the observations with the same ids
+bTreeP[,5] = ave(bTreeP$predict_0, bTreeP$id, FUN=mean)
+bTreeP[,6] = ave(bTreeP$predict_1, bTreeP$id, FUN=mean)
+bTreeP[,7] = ave(bTreeP$predict_2,bTreeP$id, FUN=mean)
+
+
+
+test = bTreeP
+bTreeP = sqldf("select distinct id, V5 as predict_0, V6 as predict_1, V7 as predict_2 from test")
+head(bTreeP)
+
+num_predict = 3
+
+
+print("log_loss for interaction depth:")
+print(shrink_fact[i]) 
+
+log_loss(bTreeP,num_predict)
+
+
+
+}
 
 
 
