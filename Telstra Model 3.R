@@ -14,6 +14,9 @@
 
 install.packages("e1071")
 install.packages("gbm")
+install.packages("xgboost")
+
+library(xgboost)
 library(vcd)
 library(plyr)
 library(stats)
