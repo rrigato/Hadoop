@@ -368,7 +368,7 @@ goodfit(train2$fault_severity)
 ################################################################
 #	implementation of extreme gradient boosting algorithms(xgboost)
 #
-#
+#	log_loss of .6173927 for fault_severity ~ location + volume
 #
 #
 #
@@ -383,10 +383,6 @@ goodfit(train2$fault_severity)
 ##################################################################
 
 
-exBoost = xgb.DMatrix(data = as.matrix(train2), label = train2$fault_severity)
-
-
-agaricus.train
 
 #extracts the location variable as a string
 as.numeric(str_sub(train2$location, start= 10))
@@ -399,36 +395,36 @@ test2[,2] = as.numeric(str_sub(test2$location, start= 10))
 train2id = train2[,1]
 train2 = train2[,-c(1)]
 
-test2id = test2[,1]
-test2 = test2[,-c(1)]
+test3id = test2[,1]
+test3 = test2[,-c(1)]
 
 #checks that the number of ids in the vector is equal to the number of rows in 
 #the data frames
 length(train2id) == nrow(train2)
-length(test2id) == nrow(test2)
+length(test3id) == nrow(test3)
 
 
 
 #temporarily remove categorical data that will be processed later
 train2 = train2[,-c(3,4,6,7)]
-test2 = test2[,-c(3,4,6,7)]
+test3 = test3[,-c(3,4,6,7)]
 
 #saves the outcome variable into a seperate vector
 train2_response = train2[,2]
-test2_response = test2[,2]
+test3_response = test3[,2]
 
 #removes outcome vector from the data_frame
-test2 = test2[,-c(2)]
+test3 = test3[,-c(2)]
 train2 = train2[,-c(2)]
 
 length(train2_response) == nrow(train2)
-length(test2_response) == nrow(test2)
+length(test3_response) == nrow(test3)
 
 train2[,2] = as.numeric(train2[,2])
 train2Matrix = as.matrix(train2)
 
-test2[,2] = as.numeric(test2[,2])
-test2Matrix = as.matrix(test2)
+test3[,2] = as.numeric(test3[,2])
+test3Matrix = as.matrix(test3)
 
 
 #cross_validation parameters
@@ -467,16 +463,55 @@ xgb.plot.importance(importance_matrix[1:2,])
 
 xgb.plot.tree(feature_names = names, model = bst, n_first_tree = 2)
 
-#the predictions are in a nrow(test2)*3 long vector
+#the predictions are in a nrow(test3)*3 long vector
 #bstPred[1:3] is the probability of 0,1,2 for fault_severity
 #for the first observation of test2
-bstPred = predict(bst, test2Matrix)
+#has to be a numeric matrix just like the training set
+bstPred = predict(bst, test3Matrix)
 is.vector(bstPred)
+str(bstPred)
+
 
 #initialize output frame
 outputFrame = data.frame(matrix(nrow= nrow(test2), ncol=4))
 outputFrame = rename(outputFrame, c("X1" = "id", "X2" = "predict_0", "X3" = "predict_1","X4" = "predict_2")) 
-str(bstPred)
+
+#Puts the ids for the observations into the first column of outputFrame[,1]
+outputFrame[,1] = test2[,1]
+#test to make sure ids are the same
+sum(outputFrame[,1] != test2[,1])
+z_element = 1
+for (i in 1:nrow(test2))
+{
+	for (z in 1:3)
+	{
+		#the ith row of outputFrame is given observation z_element
+		#probability of occuring from bstPred
+		#column z+1 since id is in column 1
+		outputFrame[i,z+1] = bstPred[z_element]
+		z_element = z_element + 1
+	}
+}
+
+
+
+outputFrame[,1] = as.integer(outputFrame[,1])
+test = outputFrame
+outputFrame = sqldf("select distinct id, predict_0, predict_1, predict_2 from test")
+
+outputFrame = unique(outputFrame[,1])
+
+which(outputFrame[,1] %in% unique(outputFrame[,1])
+unique(as.matrix(outputFrame))
+outputFrame = outputFrame[!duplicated(outputFrame$id),]
+
+length(outputFrame$id)
+length(unique(test2$id))
+num_predict = 3
+log_loss(outputFrame,num_predict)
+
+
+
 ###############################################################
 #
 #The log_loss function takes two arguements, a data.frame and
