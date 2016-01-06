@@ -441,7 +441,7 @@ bst.cv = xgb.cv(param=param, data = train2Matrix, label = train2_response,
                 nfold = cv.nfold, nrounds = cv.nround)
 
 
-nround = 50
+nround = 300
 #actual xgboost
 bst = xgboost(param=param, data = train2Matrix, label = train2_response, nrounds=nround)
 
@@ -504,6 +504,16 @@ outputFrame = unique(outputFrame[,1])
 which(outputFrame[,1] %in% unique(outputFrame[,1])
 unique(as.matrix(outputFrame))
 outputFrame = outputFrame[!duplicated(outputFrame$id),]
+
+
+#average the observations with the same ids
+outputFrame[,5] = ave(outputFrame$predict_0, outputFrame$id, FUN=mean)
+outputFrame[,6] = ave(outputFrame$predict_1, outputFrame$id, FUN=mean)
+outputFrame[,7] = ave(outputFrame$predict_2,outputFrame$id, FUN=mean)
+outputFrame = outputFrame[,-c(2,3,4)]
+outputFrame = rename(outputFrame, c( "V5" = "predict_0", "V6" = "predict_1","V7" = "predict_2")) 
+
+
 
 length(outputFrame$id)
 length(unique(test2$id))

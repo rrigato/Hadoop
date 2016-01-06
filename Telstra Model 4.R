@@ -118,9 +118,10 @@ test2 = train[ran_num_test,]
 ################################################################
 #	implementation of extreme gradient boosting algorithms(xgboost)
 #
-#	log_loss of .6173927 for fault_severity ~ location + volume
+#	log_loss of .6173927 for fault_severity ~ location + volume nround = 50
 #
-#
+#	log_loss of .5663916 for fault_severity ~ location + volume +
+#	 log_feature nround = 300
 #
 #
 #
@@ -139,6 +140,11 @@ train2[,2] = as.numeric(str_sub(train2$location, start= 10))
 test2[,2] = as.numeric(str_sub(test2$location, start= 10))
 
 
+#extracts log_feature
+train2[,5] = as.numeric(str_sub(train2$log_feature[1], start= 9))
+test2[,5] = as.numeric(str_sub(test2$log_feature, start= 9))
+
+
 #stores the ids in a vector and removes id from data frames
 train2id = train2[,1]
 train2 = train2[,-c(1)]
@@ -154,8 +160,8 @@ length(test3id) == nrow(test3)
 
 
 #temporarily remove categorical data that will be processed later
-train2 = train2[,-c(3,4,6,7)]
-test3 = test3[,-c(3,4,6,7)]
+train2 = train2[,-c(3,6,7)]
+test3 = test3[,-c(3,6,7)]
 
 #saves the outcome variable into a seperate vector
 train2_response = train2[,2]
@@ -189,7 +195,7 @@ bst.cv = xgb.cv(param=param, data = train2Matrix, label = train2_response,
                 nfold = cv.nfold, nrounds = cv.nround)
 
 
-nround = 50
+nround = 300
 #actual xgboost
 bst = xgboost(param=param, data = train2Matrix, label = train2_response, nrounds=nround)
 
@@ -207,7 +213,7 @@ names <- dimnames(train2Matrix)[[2]]
 importance_matrix <- xgb.importance(names, model = bst)
 
 # Nice graph for importance
-xgb.plot.importance(importance_matrix[1:2,])
+xgb.plot.importance(importance_matrix[1:3,])
 
 
 
@@ -246,8 +252,17 @@ for (i in 1:nrow(test2))
 
 
 
+#average the observations with the same ids
+outputFrame[,5] = ave(outputFrame$predict_0, outputFrame$id, FUN=mean)
+outputFrame[,6] = ave(outputFrame$predict_1, outputFrame$id, FUN=mean)
+outputFrame[,7] = ave(outputFrame$predict_2,outputFrame$id, FUN=mean)
+outputFrame = outputFrame[,-c(2,3,4)]
+outputFrame = rename(outputFrame, c( "V5" = "predict_0", "V6" = "predict_1","V7" = "predict_2")) 
+
+
 
 outputFrame = outputFrame[!duplicated(outputFrame$id),]
+
 
 
 num_predict = 3
