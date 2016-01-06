@@ -16,19 +16,45 @@ install.packages("e1071")
 install.packages("gbm")
 install.packages("xgboost")
 install.packages("stringr")
+install.packages("methods")
+install.packages("Ckmeans.1d.dp")
+install.packages("DiagrammeR")
+
+#xgboost
+library(DiagrammeR)
+library(Ckmeans.1d.dp)
 library(xgboost)
+library(methods)
+library(data.table)
+library(magrittr)
+
+
+#manipulating strings
 library(stringr)
+
 library(vcd)
 library(plyr)
 library(stats)
+
+#sql queries
 library(sqldf)
+
 library(MASS)
+
+#decision trees
 library(tree)
+
 library(ISLR)
+#randomforests
 library(randomForest)
+
 library(foreign)
 library(nnet)
+
+#naive bayes
 library(e1071)
+
+#general boosting models
 library(gbm)
 
 #importing the datasets that were provided by Telstra
@@ -398,6 +424,59 @@ train2 = train2[,-c(2)]
 length(train2_response) == nrow(train2)
 length(test2_response) == nrow(test2)
 
+train2[,2] = as.numeric(train2[,2])
+train2Matrix = as.matrix(train2)
+
+test2[,2] = as.numeric(test2[,2])
+test2Matrix = as.matrix(test2)
+
+
+#cross_validation parameters
+numberOfClasses = 3
+param = list( "objective" = "multi:softprob",
+		"eval_metric" = "mlogloss",
+		"num_class" = numberOfClasses
+		)
+cv.nround <- 5
+cv.nfold <- 3
+
+#setting up cross_validation
+bst.cv = xgb.cv(param=param, data = train2Matrix, label = train2_response, 
+                nfold = cv.nfold, nrounds = cv.nround)
+
+
+nround = 50
+#actual xgboost
+bst = xgboost(param=param, data = train2Matrix, label = train2_response, nrounds=nround)
+
+
+model <- xgb.dump(bst, with.stats = T)
+model[1:10]
+
+
+
+
+# Get the feature real names
+names <- dimnames(train2Matrix)[[2]]
+
+# Compute feature importance matrix
+importance_matrix <- xgb.importance(names, model = bst)
+
+# Nice graph for importance
+xgb.plot.importance(importance_matrix[1:2,])
+
+xgb.plot.tree(feature_names = names, model = bst, n_first_tree = 2)
+
+#the predictions are in a nrow(test2)*3 long vector
+#bstPred[1:3] is the probability of 0,1,2 for fault_severity
+#for the first observation of test2
+bstPred = predict(bst, test2Matrix)
+is.vector(bstPred)
+
+#initialize output frame
+outputFrame = data.frame(matrix(nrow= nrow(test2), ncol=4))
+outputFrame = rename(outputFrame, c("X1" = "id", "X2" = "predict_0", "X3" = "predict_1","X4" = "predict_2")) 
+str(bstPred)
 ###############################################################
 #
 #The log_loss function takes two arguements, a data.frame and
