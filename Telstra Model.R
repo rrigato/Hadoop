@@ -131,7 +131,7 @@ goodfit(train2$fault_severity)
 boxplot(train2$fault_severity~ train2$severity_type)
 boxplot(train2$fault_severity~ train2$event_type)
 plot(train2$fault_severity~train2$volume)
-table(train2$fault_severity.volume)
+
 
 
 #sorts based on severity level type
@@ -162,9 +162,10 @@ which(train[,4] == 'severity_type 3' )
 count(level_1, 'fault_severity')/nrow(level_1)
 count(level_2, 'fault_severity')/nrow(level_2)
 
-count(train, 'severity_type')/nrow(train)
+count(level_4, 'fault_severity')/nrow(level_4)
 
-one_table = table(level_1$fault_severity, level_1$event_type)
+#good for two categoricals
+one_table = table( level_1$total_volume,level_1$fault_severity)
 prop.table(one_table,1)
 
 
@@ -607,10 +608,11 @@ sum(transform(data_frame6,sum=rowSums(data_frame6[,2:4]))[,5] >1.00001)
 ################################################################
 #	algorithm 7: multinomial for each category of severity_type
 #
-#	log_loss: .8053
+#	log_loss = .7961833
 #
-#
-#
+#	logistic regression was used on severity_type 4 and 5
+#	This is because they have no observations of response 2
+#	
 ################################################################
 
 
@@ -660,47 +662,55 @@ multi.pred2 = multi.pred2[c(4,1,2,3)]
 
 
 #fix severity_type 3
-lda.pred3 = test2[which(test2[,4] == 'severity_type 3'),]
-lda.pred3 = lda.pred3[c(1,2,3,4)]
-lda.pred3[,2]= .86
-lda.pred3[,3] = .14
-lda.pred3[,4] = 0
-lda.pred3 = rename(lda.pred3, c("location" = "predict_0", "fault_severity" = "predict_1","severity_type" = "predict_2"))
+multi.pred3 = test2[which(test2[,4] == 'severity_type 3'),]
+multi.pred3 = multi.pred3[c(1,2,3,4)]
+multi.pred3[,2]= .86
+multi.pred3[,3] = .14
+multi.pred3[,4] = 0
+multi.pred3 = rename(multi.pred3, c("location" = "predict_0", "fault_severity" = "predict_1","severity_type" = "predict_2"))
 
 
 
 
 
 
-#linear discriminant analysis for severity_type 4 bin
-lda.fit4 = lda(fault_severity~total_volume , data= level_4)
-lda.pred4 = predict(lda.fit4, test2[which(test2[,4] == 'severity_type 4'),])
-lda.pred4 = as.data.frame(lda.pred4)
-head(lda.pred4)
-lda.pred4[,5] = 0
-lda.pred4[,6]= test2[which(test2[,4] == 'severity_type 4'),1]
-lda.pred4 = rename(lda.pred4, c("posterior.0" = "predict_0", "posterior.1" = "predict_1","V5" = "predict_2", "V6" = "id"))
+#logistic regression
+multi.fit4 = glm(fault_severity~total_volume , data= level_4, family = "binomial")
+#gets the probability of predict_1
+multi.pred4 = predict(multi.fit4, newdata=test2[which(test2[,4] == 'severity_type 4'),], type= "response")
+multi.pred4 = as.data.frame(multi.pred4)
+head(multi.pred4)
 
-#reorders the variables and drops not needed variables.
-lda.pred4 = lda.pred4[c(6,2,3,5)]
-
-
-
-
-
-
-#linear discriminant analysis for severity_type 5 bin
-lda.fit5 = lda(fault_severity~total_volume , data= level_5)
-lda.pred5 = predict(lda.fit5, test2[which(test2[,4] == 'severity_type 5'),])
-lda.pred5 = as.data.frame(lda.pred5)
-head(lda.pred5)
-lda.pred5[,5] = 0
-lda.pred5[,6]= test2[which(test2[,4] == 'severity_type 5'),1]
-lda.pred5 = rename(lda.pred5, c("posterior.0" = "predict_0", "posterior.1" = "predict_1","V5" = "predict_2", "V6" = "id"))
+#sets column two as the probability of 1 - predict_1
+#since prob(2) ==0 
+multi.pred4[,2] = 1 - multi.pred4[,1]
+multi.pred4[,3]=0
+multi.pred4[,4]= test2[which(test2[,4] == 'severity_type 4'),1]
+multi.pred4 = rename(multi.pred4, c("V2" = "predict_0", "multi.pred4" = "predict_1","V3" = "predict_2", "V4" = "id"))
 
 #reorders the variables and drops not needed variables.
-lda.pred5 = lda.pred5[c(6,2,3,5)]
+multi.pred4 = multi.pred4[c(4,2,1,3)]
 
+
+
+
+
+#logistic regression
+multi.fit5 = glm(fault_severity~total_volume , data= level_5, family = "binomial")
+#gets the probability of predict_1
+multi.pred5 = predict(multi.fit5, newdata=test2[which(test2[,4] == 'severity_type 5'),], type= "response")
+multi.pred5 = as.data.frame(multi.pred5)
+head(multi.pred5)
+
+#sets column two as the probability of 1 - predict_1
+#since prob(2) ==0 
+multi.pred5[,2] = 1 - multi.pred5[,1]
+multi.pred5[,3]=0
+multi.pred5[,4]= test2[which(test2[,4] == 'severity_type 5'),1]
+multi.pred5 = rename(multi.pred5, c("V2" = "predict_0", "multi.pred5" = "predict_1","V3" = "predict_2", "V4" = "id"))
+
+#reorders the variables and drops not needed variables.
+multi.pred5 = multi.pred5[c(4,2,1,3)]
 
 
 
@@ -715,15 +725,16 @@ lda.pred5 = lda.pred5[c(6,2,3,5)]
 data_frame7 = rbind(multi.pred1, multi.pred2)
 
 
-data_frame7 = rbind(data_frame7, lda.pred3)
-data_frame7 = rbind(data_frame7, lda.pred4)
-data_frame7 = rbind(data_frame7, lda.pred5)
+data_frame7 = rbind(data_frame7, multi.pred3)
+data_frame7 = rbind(data_frame7, multi.pred4)
+data_frame7 = rbind(data_frame7, multi.pred5)
 
 
 
 
 head(data_frame7)
 nrow(data_frame7)
+str(data_frame7)
 
 
 names(data_frame7)

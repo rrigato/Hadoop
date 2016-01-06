@@ -14,6 +14,10 @@
 
 install.packages("e1071")
 install.packages("gbm")
+install.packages("xgboost")
+install.packages("stringr")
+library(xgboost)
+library(stringr)
 library(vcd)
 library(plyr)
 library(stats)
@@ -48,19 +52,6 @@ train = merge(train , log_feature, by='id')
 test = merge(test , log_feature, by='id')
 
 
-
-##############################################################
-#	Sums together the volume variable from log_feature
-#	does not distinguish between log_feature
-#
-#
-#
-#############################################################
-train = sqldf("select id, location, fault_severity, severity_type,
-		 log_feature, sum(volume) as total_volume from train group by 1")
-
-test = sqldf("select id, location, severity_type,
-		 log_feature, sum(volume) as total_volume from test group by 1")
 
 
 
@@ -104,11 +95,6 @@ ran_num_train = sample(1:nrow(train), size_of_train)
 ran_num_test = ran_num_test[(!(ran_num_test %in% ran_num_train)) == TRUE]
 train2 = train[ran_num_train,]
 test2 = train[ran_num_test,]
-
-#validates that every observation in the training set in accounted for
-temp = numeric()
-temp = c(train2[1:nrow(train2),1],test2[1:nrow(test2),1])
-sum(temp %in% train[1:nrow(train),1])
 
 
 
@@ -181,24 +167,27 @@ log_loss(nb.pred2,num_predict)
 
 
 
-
-
 ################################################################
 #	Implementation of a classification tree
 #	fault_severity~ severity_type log_loss: .8473691
 #	fault_severity~ severity_type + log_loss: .8473691
-
-
-	randomForest() for severity_type + resource_type + volume log_loss: 4.055598
-
-	boosting log_loss = .9930778
-	boosting log_loss = .7082097 # with shrinkage = .65, n.trees = 500, interaction.depth=4
-	boosting log_loss = .6008061 # with shrinkage = .35, n.trees = 500, interaction.depth=4
-	boosting log_loss = .6186485 # with shrinkage = .35, n.trees = 500, interaction.depth=4
-	boosting log_loss = .7001604 # with shrinkage = .25, n.trees = 1000, interaction.depth=4
-	boosting log_loss = .5851071 # with shrinkage = .25, n.trees = 250, interaction.depth=3
-
-	boosting log_loss = .5804122 # with shrinkage = .1, n.trees = 300, interaction.depth = 2
+#
+#
+#	randomForest() for severity_type + resource_type + volume log_loss: 4.055598
+#
+#	boosting log_loss = .9930778
+#	boosting log_loss = .7082097 # with shrinkage = .65, n.trees = 500, interaction.depth=4
+#	boosting log_loss = .6008061 # with shrinkage = .35, n.trees = 500, interaction.depth=4
+#	boosting log_loss = .6186485 # with shrinkage = .35, n.trees = 500, interaction.depth=4
+#	boosting log_loss = .7001604 # with shrinkage = .25, n.trees = 1000, interaction.depth=4
+#	boosting log_loss = .5851071 # with shrinkage = .25, n.trees = 250, interaction.depth=3
+#
+#	boosting log_loss = .5804122 # with shrinkage = .1, n.trees = 300, interaction.depth = 2
+#
+#	.5770043
+#	.5803316 1300 trees .01 shrinkage
+#	.5888138 5000 trees .001 shrinkage
+#	.5888594 15000 trees .001 shrinkage
 ##################################################################
 
 
@@ -292,6 +281,111 @@ log_loss(bTreeP,num_predict)
 
 
 
+
+
+
+
+################################################################
+#	Support Vector machines
+#
+#
+#
+#
+#
+#
+#
+##################################################################
+
+svmec = svm(fault_severity ~. -id, kernel="polynomial",
+		gamma = 1, cost = 1,  data = train2)
+bTreeP = predict(bTree, newdata=test2, n.trees = 5000, type="response")
+bTreeP = as.data.frame(bTreeP)
+head(bTreeP)
+bTreeP[,4] =test2[,1]
+bTreeP = rename(bTreeP, c("0.5000" = "predict_0", "1.5000" = "predict_1","2.5000" = "predict_2", "V4" = "id"))
+bTreeP = bTreeP[c(4,1,2,3)]
+
+
+#average the observations with the same ids
+bTreeP[,5] = ave(bTreeP$predict_0, bTreeP$id, FUN=mean)
+bTreeP[,6] = ave(bTreeP$predict_1, bTreeP$id, FUN=mean)
+bTreeP[,7] = ave(bTreeP$predict_2,bTreeP$id, FUN=mean)
+
+
+
+test = bTreeP
+bTreeP = sqldf("select distinct id, V5 as predict_0, V6 as predict_1, V7 as predict_2 from test")
+
+
+num_predict = 3
+log_loss(bTreeP,num_predict)
+
+
+sum(transform(bTreeP,sum=rowSums(bTreeP[,2:4]))[,5] >1.000001)
+
+
+
+
+goodfit(train2$fault_severity)
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################
+#	implementation of extreme gradient boosting algorithms(xgboost)
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+##################################################################
+
+
+exBoost = xgb.DMatrix(data = as.matrix(train2), label = train2$fault_severity)
+
+
+agaricus.train
+
+#extracts the location variable as a string
+as.numeric(str_sub(train2$location, start= 10))
+
+train2[,2] = as.numeric(str_sub(train2$location, start= 10))
+test2[,2] = as.numeric(str_sub(test2$location, start= 10))
+
+
+#stores the ids in a vector and removes id from data frames
+train2id = train2[,1]
+train2 = train2[,-c(1)]
+
+test2id = test2[,1]
+test2 = test2[,-c(1)]
+
+#checks that the number of ids in the vector is equal to the number of rows in 
+#the data frames
+length(train2id) == nrow(train2)
+length(test2id) == nrow(test2)
+
+
+
+#temporarily remove categorical data that will be processed later
+train2 = train2[,-c(3,4,6,7)]
+test2 = test2[,-c(3,4,6,7)]
 
 
 
