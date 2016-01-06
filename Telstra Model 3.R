@@ -387,8 +387,16 @@ length(test2id) == nrow(test2)
 train2 = train2[,-c(3,4,6,7)]
 test2 = test2[,-c(3,4,6,7)]
 
+#saves the outcome variable into a seperate vector
+train2_response = train2[,2]
+test2_response = test2[,2]
 
+#removes outcome vector from the data_frame
+test2 = test2[,-c(2)]
+train2 = train2[,-c(2)]
 
+length(train2_response) == nrow(train2)
+length(test2_response) == nrow(test2)
 
 ###############################################################
 #
