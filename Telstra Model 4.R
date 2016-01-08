@@ -11,7 +11,8 @@
 #
 #
 #########################################################################################
-
+#write to an xlsx file
+library(xlsx)
 #xgboost
 library(DiagrammeR)
 library(Ckmeans.1d.dp)
@@ -124,12 +125,24 @@ test2 = train[ran_num_test,]
 #	 log_feature nround = 300
 #
 #
+##	log_loss of .4738129 for fault_severity ~ all features
+#	 log_feature nround = 300 eta =  .3
+#
+###	log_loss of .4677611 for fault_severity ~ all features
+#	 log_feature nround = 300 eta =  .5
+#
+##
+#
+###	log_loss of .4882783 for fault_severity ~ all features
+#	 log_feature nround = 300 eta =  .9
+#
+####	log_loss of .4740813 for fault_severity ~ all features
+#	 log_feature nround = 300 eta =  .3 gamma = .05
 #
 #
 #
-#
-#
-#
+####	log_loss of .4740813 for fault_severity ~ all features
+#	 log_feature nround = 300 eta =  .3 subsample = .5
 #
 ##################################################################
 
@@ -208,7 +221,7 @@ bst.cv = xgb.cv(param=param, data = train2Matrix, label = train2_response,
 
 nround = 300
 #actual xgboost
-bst = xgboost(param=param, data = train2Matrix, label = train2_response, nrounds=nround)
+bst = xgboost(param=param, data = train2Matrix, label = train2_response, nrounds=nround, max_delta_step = 10)
 
 
 model <- xgb.dump(bst, with.stats = T)
@@ -280,6 +293,8 @@ num_predict = 3
 log_loss(outputFrame,num_predict)
 
 
+#write the data frame to an excel file
+write.xlsx(outputFrame,'C:/Users/Randy/Downloads/Telstra Kaggle Competion/Results.xlsx')
 
 ###############################################################
 #
