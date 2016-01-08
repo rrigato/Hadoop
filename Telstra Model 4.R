@@ -122,28 +122,35 @@ test2 = train[ran_num_test,]
 #	log_loss of .6173927 for fault_severity ~ location + volume nround = 50
 #
 #	log_loss of .5663916 for fault_severity ~ location + volume +
-#	 log_feature nround = 300
+#	  nround = 300
 #
 #
 ##	log_loss of .4738129 for fault_severity ~ all features
-#	 log_feature nround = 300 eta =  .3
+#	  nround = 300 eta =  .3
 #
 ###	log_loss of .4677611 for fault_severity ~ all features
-#	 log_feature nround = 300 eta =  .5
+#	  nround = 300 eta =  .5
 #
 ##
 #
 ###	log_loss of .4882783 for fault_severity ~ all features
-#	 log_feature nround = 300 eta =  .9
+#	  nround = 300 eta =  .9
 #
 ####	log_loss of .4740813 for fault_severity ~ all features
-#	 log_feature nround = 300 eta =  .3 gamma = .05
+#	  nround = 300 eta =  .3 gamma = .05
 #
 #
 #
 ####	log_loss of .4740813 for fault_severity ~ all features
-#	 log_feature nround = 300 eta =  .3 subsample = .5
+#	 nround = 300 eta =  .3 subsample = .5
 #
+####	log_loss of .4825713 for fault_severity ~ all features - resource_type
+#	  nround = 300 eta =  .3 subsample = .5
+
+####	log_loss of .4663849 for fault_severity ~ all features
+#	 nround = 348(optimal number of rounds by cross_validation eta =  .3 subsample = .5
+
+
 ##################################################################
 
 
@@ -195,6 +202,18 @@ test3_response = test3[,2]
 test3 = test3[,-c(2)]
 train2 = train2[,-c(2)]
 
+
+#removes resource_type
+#test3 = test3[,-c(6)]
+#train2 = train2[,-c(6)]
+
+
+#removes event_type
+#test3 = test3[,-c(5)]
+#train2 = train2[,-c(5)]
+
+
+
 length(train2_response) == nrow(train2)
 length(test3_response) == nrow(test3)
 
@@ -211,21 +230,23 @@ param = list( "objective" = "multi:softprob",
 		"eval_metric" = "mlogloss",
 		"num_class" = numberOfClasses
 		)
-cv.nround <- 5
+cv.nround <- 1000
 cv.nfold <- 3
 
 #setting up cross_validation
 bst.cv = xgb.cv(param=param, data = train2Matrix, label = train2_response, 
                 nfold = cv.nfold, nrounds = cv.nround)
 
+#test for optimal nround
+bst.cv[which(min(bst.cv$test.mlogloss.mean) == bst.cv$test.mlogloss.mean),]
 
-nround = 300
+#sets the number of rounds based on the number of rounds determined by cross_validation
+nround = which(min(bst.cv$test.mlogloss.mean) == bst.cv$test.mlogloss.mean)
 #actual xgboost
 bst = xgboost(param=param, data = train2Matrix, label = train2_response, nrounds=nround, max_delta_step = 10)
 
 
-model <- xgb.dump(bst, with.stats = T)
-model[1:10]
+
 
 
 
