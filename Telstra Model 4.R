@@ -148,7 +148,16 @@ test2 = train[ran_num_test,]
 #	  nround = 300 eta =  .3 subsample = .5
 
 ####	log_loss of .4663849 for fault_severity ~ all features
-#	 nround = 348(optimal number of rounds by cross_validation eta =  .3 subsample = .5
+#	 nround = 348(optimal number of rounds by cross_validation eta =  .3 
+
+####	log_loss of .4621409 for fault_severity ~ all features - resource_type
+#	 nround = (optimal number of rounds by cross_validation) eta =  .3 
+
+####	log_loss of .4635553 for fault_severity ~ all features - resource_type - event_type
+#	 nround = (optimal number of rounds by cross_validation) eta =  .3 
+
+####	log_loss of .5059381 for fault_severity ~ all features - resource_type - event_type - severity_type
+#	 nround = (optimal number of rounds by cross_validation) eta =  .3 
 
 
 ##################################################################
@@ -204,14 +213,34 @@ train2 = train2[,-c(2)]
 
 
 #removes resource_type
-#test3 = test3[,-c(6)]
-#train2 = train2[,-c(6)]
+test3 = test3[,-c(6)]
+train2 = train2[,-c(6)]
 
 
 #removes event_type
-#test3 = test3[,-c(5)]
-#train2 = train2[,-c(5)]
+test3 = test3[,-c(5)]
+train2 = train2[,-c(5)]
 
+#removes severity_type
+test3 = test3[,-c(2)]
+train2 = train2[,-c(2)]
+
+
+#removes volume
+test3 = test3[,-c(3)]
+train2 = train2[,-c(3)]
+
+#adds a fourth variable which is the log_feature* volume
+test3[,4] = test3[,3] * test3[,2]
+train2[,4] = train2[,3] * train2[,2]
+
+#adds a fifth variable which is log_feature*log_feature
+test3[,5] = test3[,1] * test3[,1]
+train2[,5] = train2[,1] * train2[,1]
+
+
+test3[,6] = test3[,3] * test3[,3]
+train2[,6] = train2[,3] * train2[,3]
 
 
 length(train2_response) == nrow(train2)
@@ -223,7 +252,13 @@ train2Matrix = as.matrix(train2)
 test3[,2] = as.numeric(test3[,2])
 test3Matrix = as.matrix(test3)
 
+#removes volume
+test3 = test3[,-c(3)]
+train2 = train2[,-c(3)]
 
+#removes volume
+test3 = test3[,-c(2)]
+train2 = train2[,-c(2)]
 #cross_validation parameters
 numberOfClasses = 3
 param = list( "objective" = "multi:softprob",
