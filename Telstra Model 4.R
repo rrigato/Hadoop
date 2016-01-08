@@ -141,8 +141,21 @@ test2[,2] = as.numeric(str_sub(test2$location, start= 10))
 
 
 #extracts log_feature
-train2[,5] = as.numeric(str_sub(train2$log_feature[1], start= 9))
+train2[,5] = as.numeric(str_sub(train2$log_feature, start= 9))
 test2[,5] = as.numeric(str_sub(test2$log_feature, start= 9))
+
+#extracts severity_type
+train2[,4] = as.numeric(str_sub(train2$severity_type, start= 15))
+test2[,4] = as.numeric(str_sub(test2$severity_type, start= 15))
+
+
+#extracts event_type
+train2[,7] = as.numeric(str_sub(train2$event_type, start= 12))
+test2[,7] = as.numeric(str_sub(test2$event_type, start= 12))
+
+#extracts resource_type
+train2[,8] = as.numeric(str_sub(train2$resource_type, start= 15))
+test2[,8] = as.numeric(str_sub(test2$resource_type, start= 15))
 
 
 #stores the ids in a vector and removes id from data frames
@@ -159,9 +172,7 @@ length(test3id) == nrow(test3)
 
 
 
-#temporarily remove categorical data that will be processed later
-train2 = train2[,-c(3,6,7)]
-test3 = test3[,-c(3,6,7)]
+
 
 #saves the outcome variable into a seperate vector
 train2_response = train2[,2]
@@ -213,7 +224,7 @@ names <- dimnames(train2Matrix)[[2]]
 importance_matrix <- xgb.importance(names, model = bst)
 
 # Nice graph for importance
-xgb.plot.importance(importance_matrix[1:3,])
+xgb.plot.importance(importance_matrix[,])
 
 
 
