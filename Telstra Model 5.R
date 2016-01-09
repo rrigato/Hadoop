@@ -11,6 +11,16 @@
 #
 #
 #########################################################################################
+
+install.packages("neuralnet")
+install.packages("caret", dependencies = c("Depends", "Suggests"))
+install.packages("Matrix")
+#for examining classification and regression trees
+library(caret)
+
+#for neuralnetwork analysis
+library(neuralnet)
+
 #write to an xlsx file
 library(xlsx)
 #xgboost
@@ -203,6 +213,7 @@ length(test3id) == nrow(test3)
 
 
 
+
 #saves the outcome variable into a seperate vector
 train2_response = train2[,2]
 test3_response = test3[,2]
@@ -317,6 +328,56 @@ log_loss(outputFrame,num_predict)
 #write the data frame to an excel file
 write.xlsx(outputFrame,'C:/Users/Randy/Downloads/Telstra Kaggle Competion/Results.xlsx')
 
+
+
+
+
+
+
+
+
+
+
+
+#########################################################################################
+#Using the caret package
+#
+#	
+#
+#
+#
+#
+#
+#
+#
+#
+#
+##########################################################################################
+
+
+caretTrain1 = train(fault_severity ~., data= train2,
+				method = "nnet")
+
+
+
+ctrl <- trainControl(method = "repeatedcv",
+ repeats = 3,
+ classProbs = TRUE,
+ summaryFunction = multiClassSummary)
+
+
+#have to have the train data followed by the train response 
+caretTrain = train(  train2[,-c(2,6)], train2[,2],
+				preProcess = c("center", "scale"),
+				method = "nnet",
+				 trControl = ctrl)
+plot(caretTrain)
+
+
+#doesn't work
+cl = c(0,1,2)
+caretKNN = knn3Train(train2[,-3], test2[,-c(1,3)], k=5, cl, prob =TRUE)
+caretProbs = predict(caretTrain1, newdata = test2[,-1], type = "prob")
 ###############################################################
 #
 #The log_loss function takes two arguements, a data.frame and
@@ -364,16 +425,6 @@ log_loss <- function(data_frame, num_predict)
 
 
 }
-
-
-
-
-
-
-
-
-
-
 
 
 
