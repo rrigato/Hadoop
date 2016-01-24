@@ -4,7 +4,7 @@
 #The goal of this script is to predict Telstra fault severity at any location.
 #The response variable is 0(no fault) 1 (a few faults)  or 2 (many faults)
 #
-#Part three
+#Part five
 #
 #
 #
@@ -109,7 +109,7 @@ test = merge(test , resource_type, by='id')
 
 
 #edit The percentage of the dataset in the train2 and test2, used to build a model 
-size_of_train = floor(.5*nrow(train))
+size_of_train = floor(.6*nrow(train))
 ran_num_test = 1:nrow(train)
 
 #gets random numbers for train2 using a sample
@@ -122,7 +122,13 @@ train2 = train[ran_num_train,]
 test2 = train[ran_num_test,]
 
 
-
+#################################################################################
+#	random forest model
+#
+#
+#
+#
+#################################################################################
 
 
 
@@ -363,16 +369,24 @@ caretTrain1 = train(fault_severity ~., data= train2,
 ctrl <- trainControl(method = "repeatedcv",
  repeats = 3,
  classProbs = TRUE,
- summaryFunction = multiClassSummary)
+summaryFunction = multiClassSummary
+)
 
+
+train2[,2] = str_replace(train2$fault_severity, '1','seg1')
+train2[,2] = str_replace(train2$fault_severity,'0','seg0')
+train2[,2] = str_replace(train2$fault_severity,'2','seg2')
 
 #have to have the train data followed by the train response 
-caretTrain = train(  train2[,-c(2,6)], train2[,2],
-				preProcess = c("center", "scale"),
+caretTrain = train(  train2[,-2], as.factor(train2[,2]),
 				method = "nnet",
-				 trControl = ctrl)
-plot(caretTrain)
+				trcontrol=ctrl,
 
+				tuneLength = 3,
+				trace = FALSE,
+				maxit = 100)
+plot(caretTrain)
+caretProbs = predict(caretTrain1, newdata = test2[,-c(1,3)], type = 'prob')
 
 #doesn't work
 cl = c(0,1,2)
