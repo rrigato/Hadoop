@@ -15,6 +15,11 @@
 install.packages("neuralnet")
 install.packages("caret", dependencies = c("Depends", "Suggests"))
 install.packages("Matrix")
+install.packages("glmnet")
+
+#used for glmnet models
+library("glmnet")
+
 #for examining classification and regression trees
 library(caret)
 
@@ -121,6 +126,78 @@ ran_num_test = ran_num_test[(!(ran_num_test %in% ran_num_train)) == TRUE]
 train2 = train[ran_num_train,]
 test2 = train[ran_num_test,]
 
+
+
+###########################################################################
+#
+#	.7732697 log_loss for glmnet
+#
+#
+#
+#
+###########################################################################
+
+
+#extracts the location variable as a string
+train2[,2] = as.numeric(str_sub(train2$location, start= 10))
+test2[,2] = as.numeric(str_sub(test2$location, start= 10))
+
+
+#extracts log_feature
+train2[,5] = as.numeric(str_sub(train2$log_feature, start= 9))
+test2[,5] = as.numeric(str_sub(test2$log_feature, start= 9))
+
+#extracts severity_type
+train2[,4] = as.numeric(str_sub(train2$severity_type, start= 15))
+test2[,4] = as.numeric(str_sub(test2$severity_type, start= 15))
+
+
+#extracts event_type
+train2[,7] = as.numeric(str_sub(train2$event_type, start= 12))
+test2[,7] = as.numeric(str_sub(test2$event_type, start= 12))
+
+#extracts resource_type
+train2[,8] = as.numeric(str_sub(train2$resource_type, start= 15))
+test2[,8] = as.numeric(str_sub(test2$resource_type, start= 15))
+
+
+
+x = train2[,c(2,4,5,6,7,8)]
+y = train2[,3]
+glmOut = glmnet(as.matrix(x),y, family = "multinomial")
+
+x2 = as.matrix(test2[,c(2,4,5,6,7,8)])
+glmPred = as.data.frame(predict(glmOut, x2, type='response'))
+
+
+
+
+
+
+outputFrame5 = data.frame(matrix(nrow= nrow(test2), ncol=4))
+outputFrame5 = rename(outputFrame5, c("X1" = "id", "X2" = "predict_0", "X3" = "predict_1","X4" = "predict_2")) 
+outputFrame5[,2:4] = glmPred[,169:171]
+outputFrame5[,1] = test2[,1]
+head(outputFrame5)
+
+
+#average the observations with the same ids
+outputFrame5[,5] = ave(outputFrame5$predict_0, outputFrame5$id, FUN=mean)
+outputFrame5[,6] = ave(outputFrame5$predict_1, outputFrame5$id, FUN=mean)
+outputFrame5[,7] = ave(outputFrame5$predict_2,outputFrame5$id, FUN=mean)
+outputFrame5 = outputFrame5[,-c(2,3,4)]
+outputFrame5 = rename(outputFrame5, c( "V5" = "predict_0", "V6" = "predict_1","V7" = "predict_2")) 
+
+
+
+outputFrame5 = outputFrame5[!duplicated(outputFrame5$id),]
+
+
+
+num_predict = 3
+log_loss(outputFrame5,num_predict)
+
+
 ######################################################################################
 #	Random forest
 #
@@ -151,9 +228,9 @@ train2[,8] = as.numeric(str_sub(train2$resource_type, start= 15))
 test2[,8] = as.numeric(str_sub(test2$resource_type, start= 15))
 
 
-ranOut = randomForest(as.factor(fault_severity)~ severity_type + log_feature
-				+ volume + event_type + resource_type, ntrees = 300,
-				importance = TRUE, data=train2)
+ranOut = randomForest(fault_severity~ severity_type + log_feature
+				+ volume + event_type + resource_type, ntrees = 500,
+				importance = TRUE, mtry = 2, data=train2)
 
 
 ranPred = predict(ranOut, newdata = test2,type = 'prob')
@@ -181,8 +258,6 @@ outputFrame4 = outputFrame4[!duplicated(outputFrame4$id),]
 
 num_predict = 3
 log_loss(outputFrame4,num_predict)
-
-
 
 
 
