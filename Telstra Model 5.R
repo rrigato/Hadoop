@@ -17,6 +17,9 @@ install.packages("caret", dependencies = c("Depends", "Suggests"))
 install.packages("Matrix")
 install.packages("glmnet")
 
+#for knn model
+library(class)
+
 #used for glmnet models
 library("glmnet")
 
@@ -127,6 +130,62 @@ train2 = train[ran_num_train,]
 test2 = train[ran_num_test,]
 
 
+##########################################################################
+#.4746735 xgboost log_loss .733 multinom log_loss
+#.8 xg + .2 multinom = .5085517
+#.9 xg + .1 multinom = .49000432
+#.95 xg + .05 multinom = .4818597
+#.995 xg + .005 multinom = .4753195
+##########################################################################
+
+outputFrame7 = data.frame(matrix(nrow= nrow(outputFrame6), ncol=4))
+outputFrame7 = rename(outputFrame7, c("X1" = "id", "X2" = "predict_0", "X3" = "predict_1","X4" = "predict_2"))
+outputFrame7[,1] = outputFrame6[,1]
+outputFrame7[,2:4] = (.995 * outputFrame[,2:4] + .005*outputFrame5[,2:4])
+log_loss(outputFrame7,num_predict)
+
+
+
+
+
+
+
+##########################################################################
+#
+#	multinom function (fits neural network to multiclass data)
+#	log_loss = .7735643
+#
+##########################################################################
+
+x = train2[,c(2,4,5,6,7,8)]
+y = test2[,-c(1,3)]
+glmOut = multinom(as.factor(y)~ location + severity_type + log_feature
+		+	volume + event_type + resource_type , data = train2, Hess= TRUE)
+glmPred = predict(glmOut,type = 'probs', newdata = test2) 
+glmPred = as.data.frame(glmPred)
+
+outputFrame6 = data.frame(matrix(nrow= nrow(test2), ncol=4))
+outputFrame6 = rename(outputFrame6, c("X1" = "id", "X2" = "predict_0", "X3" = "predict_1","X4" = "predict_2")) 
+outputFrame6[,2:4] = glmPred[,1:3]
+outputFrame6[,1] = test2[,1]
+head(outputFrame6)
+
+
+#average the observations with the same ids
+outputFrame6[,5] = ave(outputFrame6$predict_0, outputFrame6$id, FUN=mean)
+outputFrame6[,6] = ave(outputFrame6$predict_1, outputFrame6$id, FUN=mean)
+outputFrame6[,7] = ave(outputFrame6$predict_2,outputFrame6$id, FUN=mean)
+outputFrame6 = outputFrame6[,-c(2,3,4)]
+outputFrame6 = rename(outputFrame6, c( "V5" = "predict_0", "V6" = "predict_1","V7" = "predict_2")) 
+
+
+
+outputFrame6 = outputFrame6[!duplicated(outputFrame6$id),]
+
+
+
+num_predict = 3
+log_loss(outputFrame6,num_predict)
 
 ###########################################################################
 #
