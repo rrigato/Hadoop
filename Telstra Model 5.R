@@ -190,47 +190,25 @@ log_loss(outputFrame4,num_predict)
 ################################################################
 #	implementation of extreme gradient boosting algorithms(xgboost)
 #
-#	log_loss of .6173927 for fault_severity ~ location + volume nround = 50
+#	eta = .1, gamma = .1 log_loss = .44
 #
-#	log_loss of .5663916 for fault_severity ~ location + volume +
-#	  nround = 300
+#	eta = .01, gamma = .01 log_loss = .5778855
+#	
+#	eta = .05, gamma = .05 log_loss = .4864842
+#	
+#	eta = .05, gamma = .05 subsample = .75 log_loss = .4806843
+#
+#	eta = .05, gamma = .05 subsample = .25 log_loss = .498409
+#
+#	eta = .05, gamma = .05 subsample = .5 log_loss = .4837357
 #
 #
-##	log_loss of .4738129 for fault_severity ~ all features
-#	  nround = 300 eta =  .3
+#	eta = .05, gamma = .05 subsample = .75 colsample_bytree = .75 log_loss = .4837357
 #
-###	log_loss of .4677611 for fault_severity ~ all features
-#	  nround = 300 eta =  .5
-#
-##
-#
-###	log_loss of .4882783 for fault_severity ~ all features
-#	  nround = 300 eta =  .9
-#
-####	log_loss of .4740813 for fault_severity ~ all features
-#	  nround = 300 eta =  .3 gamma = .05
+#	eta = .05, gamma = .05 subsample = .75 colsample_bytree = .3 log_loss = .5748544
 #
 #
 #
-####	log_loss of .4740813 for fault_severity ~ all features
-#	 nround = 300 eta =  .3 subsample = .5
-#
-####	log_loss of .4825713 for fault_severity ~ all features - resource_type
-#	  nround = 300 eta =  .3 subsample = .5
-
-####	log_loss of .4663849 for fault_severity ~ all features
-#	 nround = 348(optimal number of rounds by cross_validation eta =  .3 
-
-####	log_loss of .4621409 for fault_severity ~ all features - resource_type
-#	 nround = (optimal number of rounds by cross_validation) eta =  .3 
-
-####	log_loss of .4635553 for fault_severity ~ all features - resource_type - event_type
-#	 nround = (optimal number of rounds by cross_validation) eta =  .3 
-
-####	log_loss of .5059381 for fault_severity ~ all features - resource_type - event_type - severity_type
-#	 nround = (optimal number of rounds by cross_validation) eta =  .3 
-
-
 ##################################################################
 
 
@@ -316,7 +294,8 @@ bst.cv[which(min(bst.cv$test.mlogloss.mean) == bst.cv$test.mlogloss.mean),]
 nround = which(min(bst.cv$test.mlogloss.mean) == bst.cv$test.mlogloss.mean)
 #actual xgboost
 bst = xgboost(param=param, data = train2Matrix, label = train2_response,
-		gamma = .1, eta = .1, nrounds=nround, max_delta_step = 10)
+		gamma = .05, eta = .05, nrounds=nround,
+		subsample = .75, max_delta_step = 10)
 
 
 
@@ -385,11 +364,6 @@ outputFrame = outputFrame[!duplicated(outputFrame$id),]
 
 num_predict = 3
 log_loss(outputFrame,num_predict)
-
-
-#write the data frame to an excel file
-write.xlsx(outputFrame,'C:/Users/Randy/Downloads/Telstra Kaggle Competion/Results.xlsx')
-
 
 
 

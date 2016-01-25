@@ -103,9 +103,16 @@ outputFrame = rename(outputFrame, c( "V5" = "predict_0", "V6" = "predict_1","V7"
 
 outputFrame = outputFrame[!duplicated(outputFrame$id),]
 
+#validation
+nrow(outputFrame) == length(unique(test$id))
+sum(outputFrame$id != unique(test$id))
 
+
+Result1 = read.csv("C:\\Users\\Randy\\Downloads\\Telstra Kaggle Competion\\Results.csv")
+
+Difference = abs((Result1[,2:4] - outputFrame[,2:4]))
 #write the data frame to an excel file
-write.xlsx(outputFrame,'C:/Users/Randy/Downloads/Telstra Kaggle Competion/Results.xlsx')
+write.xlsx(outputFrame,'C:/Users/Randy/Downloads/Telstra Kaggle Competion/Results2.xlsx')
 
 
 
