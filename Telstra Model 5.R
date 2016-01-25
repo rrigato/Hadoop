@@ -109,7 +109,7 @@ test = merge(test , resource_type, by='id')
 
 
 #edit The percentage of the dataset in the train2 and test2, used to build a model 
-size_of_train = floor(.6*nrow(train))
+size_of_train = floor(.8*nrow(train))
 ran_num_test = 1:nrow(train)
 
 #gets random numbers for train2 using a sample
@@ -121,14 +121,69 @@ ran_num_test = ran_num_test[(!(ran_num_test %in% ran_num_train)) == TRUE]
 train2 = train[ran_num_train,]
 test2 = train[ran_num_test,]
 
+######################################################################################
+#	Random forest
+#
+#
+#
+#########################################################################################
 
-#################################################################################
-#	random forest model
-#
-#
-#
-#
-#################################################################################
+#extracts the location variable as a string
+train2[,2] = as.numeric(str_sub(train2$location, start= 10))
+test2[,2] = as.numeric(str_sub(test2$location, start= 10))
+
+
+#extracts log_feature
+train2[,5] = as.numeric(str_sub(train2$log_feature, start= 9))
+test2[,5] = as.numeric(str_sub(test2$log_feature, start= 9))
+
+#extracts severity_type
+train2[,4] = as.numeric(str_sub(train2$severity_type, start= 15))
+test2[,4] = as.numeric(str_sub(test2$severity_type, start= 15))
+
+
+#extracts event_type
+train2[,7] = as.numeric(str_sub(train2$event_type, start= 12))
+test2[,7] = as.numeric(str_sub(test2$event_type, start= 12))
+
+#extracts resource_type
+train2[,8] = as.numeric(str_sub(train2$resource_type, start= 15))
+test2[,8] = as.numeric(str_sub(test2$resource_type, start= 15))
+
+
+ranOut = randomForest(as.factor(fault_severity)~ severity_type + log_feature
+				+ volume + event_type + resource_type, ntrees = 300,
+				importance = TRUE, data=train2)
+
+
+ranPred = predict(ranOut, newdata = test2,type = 'prob')
+
+ranPred = as.data.frame(ranPred)
+#initializing the output dataframe
+outputFrame4 = ranPred
+
+outputFrame4[,4] = test2[,1]
+
+outputFrame4 = rename(outputFrame4, c('0'='predict_0', '1'='predict_1',
+						'2'='predict_2', 'V4'='id'))
+#average the observations with the same ids
+outputFrame4[,5] = ave(outputFrame4$predict_0, outputFrame4$id, FUN=mean)
+outputFrame4[,6] = ave(outputFrame4$predict_1, outputFrame4$id, FUN=mean)
+outputFrame4[,7] = ave(outputFrame4$predict_2,outputFrame4$id, FUN=mean)
+outputFrame4 = outputFrame4[,-c(1,2,3)]
+outputFrame4 = rename(outputFrame4, c( "V5" = "predict_0", "V6" = "predict_1","V7" = "predict_2")) 
+
+
+
+outputFrame4 = outputFrame4[!duplicated(outputFrame4$id),]
+
+
+
+num_predict = 3
+log_loss(outputFrame4,num_predict)
+
+
+
 
 
 
@@ -260,7 +315,8 @@ bst.cv[which(min(bst.cv$test.mlogloss.mean) == bst.cv$test.mlogloss.mean),]
 #sets the number of rounds based on the number of rounds determined by cross_validation
 nround = which(min(bst.cv$test.mlogloss.mean) == bst.cv$test.mlogloss.mean)
 #actual xgboost
-bst = xgboost(param=param, data = train2Matrix, label = train2_response, nrounds=nround, max_delta_step = 10)
+bst = xgboost(param=param, data = train2Matrix, label = train2_response,
+		gamma = .1, eta = .1, nrounds=nround, max_delta_step = 10)
 
 
 
@@ -272,7 +328,7 @@ bst = xgboost(param=param, data = train2Matrix, label = train2_response, nrounds
 names <- dimnames(train2Matrix)[[2]]
 
 # Compute feature importance matrix
-importance_matrix <- xgb.importance(names, model = bst)
+importance_matrix <- xgb.importance(names, model = bst); importance_matrix
 
 # Nice graph for importance
 xgb.plot.importance(importance_matrix[,])
