@@ -106,7 +106,7 @@ test = merge(test, severity_type, by='id')
 
 
 
-
+feature_name = as.character(log_feature[!duplicated(log_feature[,2]),2]) 
 for(i in 1:386)
 {
 
@@ -115,10 +115,33 @@ for(i in 1:386)
 	#starts at i+4 cause the first four columns of train are id,location
 	#fault_severity and severity_type  
 	colnames(mtest2)[i + 4] = 
-	as.character(log_feature[unique(log_feature$log_feature),2][i])
+	as.character(feature_name[i])
 }
 head(mtest2)
 str(mtest2)
+
+train_row = 0
+column_num = 0
+for(z in 1:nrow(log_feature))
+{
+	train_row  = which(train$id == log_feature$id[z])
+	column_num = which(colnames(mtest2) == log_feature$log_feature[z])
+	if(length(train_row) != 0)
+	{
+		print("worked")
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 

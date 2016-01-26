@@ -82,8 +82,8 @@ event_type <- read.csv("C:\\Users\\Randy\\Downloads\\Telstra Kaggle Competion\\e
 
 
 #merging the datasets
-train = rbind.fill(train[c("id", "location", "fault_severity")], event_type[c( "event_type")])
-test = merge(y = test, severity_type, by='id')
+train = merge(train, severity_type, by='id')
+test = merge(test, severity_type, by='id')
 
 train = merge(train , log_feature, by='id')
 test = merge(test , log_feature, by='id')
@@ -117,7 +117,7 @@ test = merge(test , resource_type, by='id')
 
 
 #edit The percentage of the dataset in the train2 and test2, used to build a model 
-size_of_train = floor(.8*nrow(train))
+size_of_train = floor(.9*nrow(train))
 ran_num_test = 1:nrow(train)
 
 #gets random numbers for train2 using a sample
