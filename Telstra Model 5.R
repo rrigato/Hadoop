@@ -82,8 +82,8 @@ event_type <- read.csv("C:\\Users\\Randy\\Downloads\\Telstra Kaggle Competion\\e
 
 
 #merging the datasets
-train = merge(train, severity_type, by='id')
-test = merge(test, severity_type, by='id')
+train = rbind.fill(train[c("id", "location", "fault_severity")], event_type[c( "event_type")])
+test = merge(y = test, severity_type, by='id')
 
 train = merge(train , log_feature, by='id')
 test = merge(test , log_feature, by='id')
@@ -94,7 +94,7 @@ test = merge(test , log_feature, by='id')
 
 
 
-train = merge(train , event_type, by='id')
+train = merge(x = train , y = event_type, by='id', all.x = TRUE)
 test = merge(test , event_type, by='id')
 
 
