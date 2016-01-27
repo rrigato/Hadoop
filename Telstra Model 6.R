@@ -211,6 +211,21 @@ sum(mtest3[,4:389]) + sum(mtest2[,5:390]) ==sum(log_feature[,3])
 test = mtest3
 
 
+#################################################################################
+#	adds resource_type
+#
+#
+#
+#################################################################################
+	
+
+
+
+
+
+
+
+
 
 
 
@@ -228,7 +243,7 @@ test = mtest3
 
 
 
-#gets the unique 386 log_feature names as strings
+#gets the unique 53 event_type names as strings
 feature_name = as.character(event_type[!duplicated(event_type[,2]),2]) 
 for(i in 1:53)
 {
@@ -281,6 +296,69 @@ train = mtest2
 
 
 
+	#initialize the matrix	
+	 mtest3  = test
+	mtest3[,390:442] = 0
+
+
+
+
+#gets the unique 53 event_type names as strings
+feature_name = as.character(event_type[!duplicated(event_type[,2]),2]) 
+for(i in 1:53)
+{
+
+	#gets the value of each unique log_features
+	#then uses those as a column name
+	#starts at i+389 cause the first three columns of test are id,location
+	# severity_type  
+	colnames(mtest3)[i + 389] = 
+	as.character(feature_name[i])
+}
+ncol(mtest3)
+
+
+test_row = 0
+column_num = 0
+
+#puts the volume into the observation corresponding to the event_type
+#variable name
+for(z in 1:nrow(event_type))
+{
+	#gets the row in test where the id corresponds to the id in event_type
+	test_row  = which(test$id == event_type$id[z])
+
+	#getting the column which corresponds to 'feature x' 
+	column_num = which(colnames(mtest3) == event_type$event_type[z])
+	
+	#if it is length 0 then the observation corresponds to the test set
+	#otherwise place it where it belongs in mtest3
+	if(length(test_row) != 0)
+	{
+		mtest3[test_row,column_num] = 
+		mtest3[test_row,column_num] + 1
+	}
+}
+
+
+#tests to make sure the sum of the volume is equal to the sum of the event_type
+#for test observations
+sum(mtest3[,390:442]) ==length(event_type[event_type$id %in% test$id,2]) 
+
+#tests total
+sum(mtest3[,390:442]) + sum(mtest2[,391:443]) ==nrow(event_type)
+#set test equal to mtest3
+test = mtest3
+
+
+
+
+
+
+
+
+
+
 ################################################################
 #	Splitting the train dataset into train2 and test2
 #
@@ -320,6 +398,13 @@ test2 = train[ran_num_test,]
 #
 #location, severity_type, log_feature(368 variables), volume
 #eta = .1, gamma = .1 subsample = .75  log_loss = .5368068
+#
+#
+##location, severity_type, log_feature(368 variables), volume, event_type(53 variables)
+#eta = .1, gamma = .1 subsample = .75  log_loss = .5791565
+#
+#
+#
 #
 ########################################################################
 
