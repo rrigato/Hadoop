@@ -87,7 +87,6 @@ test = merge(test, severity_type, by='id')
 
 
 
-
 ###############################################################################
 #	This section of code takes the log_feature as the variable name and the
 #	volume associated with that as the value of each of those 386 unique variables
@@ -100,9 +99,9 @@ test = merge(test, severity_type, by='id')
 	#initialize the matrix	
 	 mtest2  = as.data.frame(matrix(nrow = nrow(train), ncol = 390))
 	mtest2[,5:390] = 0
-	mtest2[1:4] = train[1:4]
-	mtest2 = rename(mtest2, c('V1' = 'id', 'V2' = 'log_feature',
-	 'V3' = 'volume', 'V4' = 'severity_type'))
+	mtest2[,1:4] = train[,1:4]
+	mtest2 = rename(mtest2, c('V1' = 'id', 'V2' = 'location',
+	 'V3' = 'fault_severity', 'V4' = 'severity_type'))
 
 
 #gets the unique 386 log_feature names as strings
@@ -147,17 +146,18 @@ for(z in 1:nrow(log_feature))
 #for train observations
 sum(mtest2[,5:390]) ==sum(log_feature[log_feature$id %in% train$id,3])
 
-
+#set train equal to mtest2
+train = mtest2
 
 
 
 
 	#initialize the matrix	
-	 mtest3  = as.data.frame(matrix(nrow = nrow(test), ncol = 390))
-	mtest3[,5:390] = 0
-	mtest3[1:4] = test[1:4]
-	mtest3 = rename(mtest3, c('V1' = 'id', 'V2' = 'log_feature',
-	 'V3' = 'volume', 'V4' = 'severity_type'))
+	 mtest3  = as.data.frame(matrix(nrow = nrow(test), ncol = 389))
+	mtest3[,4:389] = 0
+	mtest3[,1:3] = test[,1:3]
+	mtest3 = rename(mtest3, c('V1' = 'id', 'V2' = 'location',
+	 'V3' = 'severity_type'))
 
 
 #gets the unique 386 log_feature names as strings
@@ -167,9 +167,9 @@ for(i in 1:386)
 
 	#gets the value of each unique log_features
 	#then uses those as a column name
-	#starts at i+4 cause the first four columns of test are id,location
-	#fault_severity and severity_type  
-	colnames(mtest3)[i + 4] = 
+	#starts at i+3 cause the first three columns of test are id,location
+	#and severity_type  
+	colnames(mtest3)[i + 3] = 
 	as.character(feature_name[i])
 }
 ncol(mtest3)
@@ -198,8 +198,285 @@ for(z in 1:nrow(log_feature))
 }
 
 
-#tests to make sure the 
-sum(mtest3[,5:390]) ==sum(log_feature[log_feature$id %in% test$id,3])
+#tests to make sure the volume for test is the same
+sum(mtest3[,4:389]) ==sum(log_feature[log_feature$id %in% test$id,3])
+
+
+
+#test to make sure total volume is the same
+sum(mtest3[,4:389]) + sum(mtest2[,5:390]) ==sum(log_feature[,3])
+
+
+#set test equal to mtest3
+test = mtest3
+
+
+
+
+################################################################
+#	Splitting the train dataset into train2 and test2
+#
+#
+#
+#################################################################
+
+
+
+
+#edit The percentage of the dataset in the train2 and test2, used to build a model 
+size_of_train = floor(.9*nrow(train))
+ran_num_test = 1:nrow(train)
+
+#gets random numbers for train2 using a sample
+ran_num_train = sample(1:nrow(train), size_of_train)
+
+#numbers not randomly selected for train2 are included in test2
+#this command gets the numbers not in ran_num_train
+ran_num_test = ran_num_test[(!(ran_num_test %in% ran_num_train)) == TRUE]
+train2 = train[ran_num_train,]
+test2 = train[ran_num_test,]
+
+
+
+
+
+
+
+
+
+################################################################
+#	implementation of extreme gradient boosting algorithms(xgboost)
+#
+#
+#eta = .05, gamma = .05 subsample = .75 colsample_bytree = .75 log_loss = .4837357
+#
+#
+#
+########################################################################
+
+
+
+#extracts the location variable as a string
+train2[,2] = as.numeric(str_sub(train2$location, start= 10))
+test2[,2] = as.numeric(str_sub(test2$location, start= 10))
+
+
+#extracts log_feature
+train2[,5] = as.numeric(str_sub(train2$log_feature, start= 9))
+test2[,5] = as.numeric(str_sub(test2$log_feature, start= 9))
+
+#extracts severity_type
+train2[,4] = as.numeric(str_sub(train2$severity_type, start= 15))
+test2[,4] = as.numeric(str_sub(test2$severity_type, start= 15))
+
+
+#extracts event_type
+train2[,7] = as.numeric(str_sub(train2$event_type, start= 12))
+test2[,7] = as.numeric(str_sub(test2$event_type, start= 12))
+
+#extracts resource_type
+train2[,8] = as.numeric(str_sub(train2$resource_type, start= 15))
+test2[,8] = as.numeric(str_sub(test2$resource_type, start= 15))
+
+
+#stores the ids in a vector and removes id from data frames
+train2id = train2[,1]
+train2 = train2[,-c(1)]
+
+test3id = test2[,1]
+test3 = test2[,-c(1)]
+
+#checks that the number of ids in the vector is equal to the number of rows in 
+#the data frames
+length(train2id) == nrow(train2)
+length(test3id) == nrow(test3)
+
+
+
+
+
+
+#saves the outcome variable into a seperate vector
+train2_response = train2[,2]
+test3_response = test3[,2]
+
+#removes outcome vector from the data_frame
+test3 = test3[,-c(2)]
+train2 = train2[,-c(2)]
+
+
+
+length(train2_response) == nrow(train2)
+length(test3_response) == nrow(test3)
+
+train2[,2] = as.numeric(train2[,2])
+train2Matrix = as.matrix(train2)
+
+test3[,2] = as.numeric(test3[,2])
+test3Matrix = as.matrix(test3)
+
+
+
+#cross_validation parameters
+numberOfClasses = 3
+param = list( "objective" = "multi:softprob",
+		"eval_metric" = "mlogloss",
+		"num_class" = numberOfClasses
+		)
+cv.nround <- 1000
+cv.nfold <- 3
+
+#setting up cross_validation
+bst.cv = xgb.cv(param=param, data = train2Matrix, label = train2_response, 
+                nfold = cv.nfold, nrounds = cv.nround)
+
+#test for optimal nround
+bst.cv[which(min(bst.cv$test.mlogloss.mean) == bst.cv$test.mlogloss.mean),]
+
+#sets the number of rounds based on the number of rounds determined by cross_validation
+nround = which(min(bst.cv$test.mlogloss.mean) == bst.cv$test.mlogloss.mean)
+#actual xgboost
+bst = xgboost(param=param, data = train2Matrix, label = train2_response,
+		gamma = .05, eta = .05, nrounds=nround,
+		subsample = .75, max_delta_step = 10)
+
+
+
+
+
+
+
+# Get the feature real names
+names <- dimnames(train2Matrix)[[2]]
+
+# Compute feature importance matrix
+importance_matrix <- xgb.importance(names, model = bst); importance_matrix
+
+# Nice graph for importance
+xgb.plot.importance(importance_matrix[,])
+
+
+
+#the predictions are in a nrow(test3)*3 long vector
+#bstPred[1:3] is the probability of 0,1,2 for fault_severity
+#for the first observation of test2
+#has to be a numeric matrix just like the training set
+bstPred = predict(bst, test3Matrix)
+is.vector(bstPred)
+str(bstPred)
+
+
+#initialize output frame
+outputFrame = data.frame(matrix(nrow= nrow(test2), ncol=4))
+outputFrame = rename(outputFrame, c("X1" = "id", "X2" = "predict_0", "X3" = "predict_1","X4" = "predict_2")) 
+
+#Puts the ids for the observations into the first column of outputFrame[,1]
+outputFrame[,1] = test2[,1]
+#test to make sure ids are the same
+sum(outputFrame[,1] != test2[,1])
+z_element = 1
+for (i in 1:nrow(test2))
+{
+	for (z in 1:3)
+	{
+		#the ith row of outputFrame is given observation z_element
+		#probability of occuring from bstPred
+		#column z+1 since id is in column 1
+		outputFrame[i,z+1] = bstPred[z_element]
+		z_element = z_element + 1
+	}
+}
+
+
+
+
+
+
+#average the observations with the same ids
+outputFrame[,5] = ave(outputFrame$predict_0, outputFrame$id, FUN=mean)
+outputFrame[,6] = ave(outputFrame$predict_1, outputFrame$id, FUN=mean)
+outputFrame[,7] = ave(outputFrame$predict_2,outputFrame$id, FUN=mean)
+outputFrame = outputFrame[,-c(2,3,4)]
+outputFrame = rename(outputFrame, c( "V5" = "predict_0", "V6" = "predict_1","V7" = "predict_2")) 
+
+
+
+outputFrame = outputFrame[!duplicated(outputFrame$id),]
+
+
+
+num_predict = 3
+log_loss(outputFrame,num_predict)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###############################################################
+#
+#The log_loss function takes two arguements, a data.frame and
+#a vector of length 1 num_predict
+#The data.frame has ncol = num_predict +1  with column 1 = id, column 2 = predict_0, 
+#column 3 = predict_1 ... etc
+#
+#It will multiply the log of the predicted probability times 1 if the observation
+#turned out to be that category, 0 otherwise
+#It sums all of those up and divides by -N, where N is the number of 
+#observations in data_frame
+#
+#################################################################
+log_loss <- function(data_frame, num_predict)
+{
+	total = 0
+	for( i in 1:nrow(data_frame))
+	{
+		
+		for(j in 1: num_predict)
+		{
+			y=0
+			#gets the id from the ith row of the data_frame
+			#if the actual fault_severity == j-1 then that is when y is 1
+			#This is the classification of the point
+			#The [1] just takes the first in case their are duplicate observations
+			#of the id
+			if (test2[which(test2$id==data_frame$id[i])[1],3] == (j-1))
+			{
+				y=1;
+				
+			}
+
+			#total is equal to total plus y times
+			# the log of the ith row and the j+1 column
+			#it is j+1 because predict_0 is in column 2
+			total = total + y*log( max( min( data_frame[i,(j+1)], 1-10^(-15) ),  10^(-15) ) )
+			
+
+		}
+		
+	}
+	print("Your logloss score is:")
+	print(-total/nrow(data_frame))
+
+
+}
+
 
 
 
