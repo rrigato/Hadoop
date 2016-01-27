@@ -213,6 +213,74 @@ test = mtest3
 
 
 
+
+#################################################################################
+#	adds event_type to the model
+#
+#
+#
+#
+##################################################################################
+	#initialize the matrix	
+	 mtest2  = train
+	mtest2[,391:443] = 0
+
+
+
+
+#gets the unique 386 log_feature names as strings
+feature_name = as.character(event_type[!duplicated(event_type[,2]),2]) 
+for(i in 1:53)
+{
+
+	#gets the value of each unique log_features
+	#then uses those as a column name
+	#starts at i+390 cause the first four columns of train are id,location
+	#fault_severity and severity_type  
+	colnames(mtest2)[i + 390] = 
+	as.character(feature_name[i])
+}
+ncol(mtest2)
+
+
+train_row = 0
+column_num = 0
+
+#puts the volume into the observation corresponding to the event_type
+#variable name
+for(z in 1:nrow(event_type))
+{
+	#gets the row in train where the id corresponds to the id in event_type
+	train_row  = which(train$id == event_type$id[z])
+
+	#getting the column which corresponds to 'feature x' 
+	column_num = which(colnames(mtest2) == event_type$event_type[z])
+	
+	#if it is length 0 then the observation corresponds to the test set
+	#otherwise place it where it belongs in mtest2
+	if(length(train_row) != 0)
+	{
+		mtest2[train_row,column_num] = 
+		mtest2[train_row,column_num] + 1
+	}
+}
+
+
+#tests to make sure the sum of the volume is equal to the sum of the event_type
+#for train observations
+sum(mtest2[,391:443]) ==length(event_type[event_type$id %in% train$id,2]) 
+
+#set train equal to mtest2
+train = mtest2
+
+
+
+
+
+
+
+
+
 ################################################################
 #	Splitting the train dataset into train2 and test2
 #
@@ -247,10 +315,11 @@ test2 = train[ran_num_test,]
 ################################################################
 #	implementation of extreme gradient boosting algorithms(xgboost)
 #
+#location, severity_type, log_feature(368 variables), volume
+#eta = .05, gamma = .05 subsample = .75  log_loss = .5899256
 #
-#eta = .05, gamma = .05 subsample = .75 colsample_bytree = .75 log_loss = .4837357
-#
-#
+#location, severity_type, log_feature(368 variables), volume
+#eta = .1, gamma = .1 subsample = .75  log_loss = .5368068
 #
 ########################################################################
 
@@ -337,8 +406,8 @@ bst.cv[which(min(bst.cv$test.mlogloss.mean) == bst.cv$test.mlogloss.mean),]
 nround = which(min(bst.cv$test.mlogloss.mean) == bst.cv$test.mlogloss.mean)
 #actual xgboost
 bst = xgboost(param=param, data = train2Matrix, label = train2_response,
-		gamma = .05, eta = .05, nrounds=nround,
-		subsample = .75, max_delta_step = 10)
+		gamma = .1, eta = .1, nrounds=nround,
+		subsample = .75, max_delta_step = 15)
 
 
 
@@ -353,7 +422,7 @@ names <- dimnames(train2Matrix)[[2]]
 importance_matrix <- xgb.importance(names, model = bst); importance_matrix
 
 # Nice graph for importance
-xgb.plot.importance(importance_matrix[,])
+xgb.plot.importance(importance_matrix[1:100,])
 
 
 
