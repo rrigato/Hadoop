@@ -221,6 +221,58 @@ test = mtest3
 
 
 
+	#initialize the matrix	
+	 mtest2  = train
+	mtest2[,391:400] = 0
+
+
+
+
+#gets the unique 10 resource_type names as strings
+feature_name = as.character(resource_type[!duplicated(resource_type[,2]),2]) 
+for(i in 1:10)
+{
+
+	#gets the value of each unique log_features
+	#then uses those as a column name
+	#starts at i+390 cause the first four columns of train are id,location
+	#fault_severity and severity_type  
+	colnames(mtest2)[i + 390] = 
+	as.character(feature_name[i])
+}
+ncol(mtest2)
+
+
+train_row = 0
+column_num = 0
+
+#puts the volume into the observation corresponding to the resource_type
+#variable name
+for(z in 1:nrow(resource_type))
+{
+	#gets the row in train where the id corresponds to the id in event_type
+	train_row  = which(train$id == resource_type$id[z])
+
+	#getting the column which corresponds to 'feature x' 
+	column_num = which(colnames(mtest2) == resource_type$resource_type[z])
+	
+	#if it is length 0 then the observation corresponds to the test set
+	#otherwise place it where it belongs in mtest2
+	if(length(train_row) != 0)
+	{
+		mtest2[train_row,column_num] = 
+		mtest2[train_row,column_num] + 1
+	}
+}
+
+
+#tests to make sure the sum of the volume is equal to the sum of the resource_type
+#for train observations
+sum(mtest2[,391:400]) ==length(resource_type[resource_type$id %in% train$id,2]) 
+
+#set train equal to mtest2
+train = mtest2
+
 
 
 
@@ -573,14 +625,23 @@ log_loss(outputFrame,num_predict)
 
 
 
+##############################################################################
+#write the results of importance matrix to a csv
+#
+#
+#
+#################################################################
+
+#rows 1-133
+write.xlsx(as.data.frame(importance_matrix),
+	'C:/Users/Randy/Downloads/Telstra Kaggle Competion/importanceMatrix.xlsx'
+	, append =TRUE)
 
 
 
-
-
-
-
-
+write.xlsx(as.data.frame(importance_matrix),
+	'C:/Users/Randy/Downloads/Telstra Kaggle Competion/importanceLogFeature.xlsx'
+	, append =TRUE)
 
 
 ###############################################################
